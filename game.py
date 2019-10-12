@@ -103,7 +103,6 @@ class MainWindow(Frame):
         self.reward_meter.grid(row=1, column=1)
         self.reward_meter_level = self.reward_meter.create_rectangle(0, 0, 10, 10, fill="blue")
 
-        
         # Bottom Frame: for game control buttons
         button_menu = Frame(self.master, bg="#444444", 
                             relief="ridge", borderwidth=5)
