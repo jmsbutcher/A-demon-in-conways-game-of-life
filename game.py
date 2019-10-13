@@ -12,7 +12,7 @@
 
 """
 # Import the "demon" (the intelligent agent) from demon.py
-from demon import Agent
+from demon import Agent, RewardScheme
 
 import random
 from random import randint
@@ -20,6 +20,49 @@ import time
 import numpy as np
 from tkinter import Tk, Frame, Button, Menu, Label, Canvas, BOTH, BOTTOM, RIGHT, LEFT
 from PIL import Image, ImageTk
+
+# Environment shapes; used for making reward schemes
+glider = np.array([[1, 1, 1, 1, 1],
+                   [1, 1, 0, 1, 1],
+                   [1, 1, 1, 0, 1],
+                   [1, 0, 0, 0, 1],
+                   [1, 1, 1, 1, 1]])
+
+# Visual field shapes
+#   0 - Not part of the visual field
+#   1 - Part of the visual field
+#   2 - The agent's eye location
+extralarge_vf = np.array( \
+    [[0, 0, 1, 1, 1, 1, 1, 0, 0],
+     [0, 1, 1, 1, 1, 1, 1, 1, 0],
+     [1, 1, 1, 1, 1, 1, 1, 1, 1],
+     [1, 1, 1, 1, 1, 1, 1, 1, 1],
+     [1, 1, 1, 1, 2, 1, 1, 1, 1],
+     [1, 1, 1, 1, 1, 1, 1, 1, 1],
+     [1, 1, 1, 1, 1, 1, 1, 1, 1],
+     [0, 1, 1, 1, 1, 1, 1, 1, 0],
+     [0, 0, 1, 1, 1, 1, 1, 0, 0]])
+large_vf = np.array( \
+    [[0, 0, 1, 1, 1, 0, 0],
+     [0, 1, 1, 1, 1, 1, 0],
+     [1, 1, 1, 1, 1, 1, 1],
+     [1, 1, 1, 2, 1, 1, 1],
+     [1, 1, 1, 1, 1, 1, 1],
+     [0, 1, 1, 1, 1, 1, 0],
+     [0, 0, 1, 1, 1, 0, 0]])
+medium_vf = np.array( \
+    [[0, 0, 1, 1, 0, 0],
+     [0, 1, 1, 1, 1, 0],
+     [1, 1, 1, 1, 1, 1],
+     [1, 1, 2, 1, 1, 1],
+     [0, 1, 1, 1, 1, 0],
+     [0, 0, 1, 1, 0, 0]])
+small_vf = np.array( \
+    [[0, 0, 1, 0, 0],
+     [0, 1, 1, 1, 0],
+     [1, 1, 2, 1, 1],
+     [0, 1, 1, 1, 0],
+     [0, 0, 1, 0, 0]])
 
 
 class MainWindow(Frame):
@@ -32,34 +75,15 @@ class MainWindow(Frame):
         self.data = np.ones(self.size, dtype="uint8")  # initialize cell states
         self.running = False    # game is paused until start_game() is called
         self.interval = 0.51    # time between steps; how fast the game runs
-        self.eye_location = np.array((self.size[0]//2, self.size[1]//2))   # Beginning location of demon's eye
-        self.vis_field = np.array(
-                    # The demon's visual field
-                    #   0 - Not part of the visual field
-                    #   1 - Part of the visual field
-                    #   2 - The agent's eye location
-                    #
-                    # extra large
-                    [[0, 0, 1, 1, 1, 0, 0],
-                     [0, 1, 1, 1, 1, 1, 0],
-                     [1, 1, 1, 1, 1, 1, 1],
-                     [1, 1, 1, 2, 1, 1, 1],
-                     [1, 1, 1, 1, 1, 1, 1],
-                     [0, 1, 1, 1, 1, 1, 0],
-                     [0, 0, 1, 1, 1, 0, 0]])
-                    # large
-                    #[[0, 0, 1, 1, 0, 0],
-                     #[0, 1, 1, 1, 1, 0],
-                     #[1, 1, 1, 1, 1, 1],
-                     #[1, 1, 2, 1, 1, 1],
-                     #[0, 1, 1, 1, 1, 0],
-                     #[0, 0, 1, 1, 0, 0]])
-                    # medium
-                    #[[0, 0, 1, 0, 0],
-                     #[0, 1, 1, 1, 0],
-                     #[1, 1, 2, 1, 1],
-                     #[0, 1, 1, 1, 0],
-                     #[0, 0, 1, 0, 0]])
+        # Beginning location of demon's eye
+        self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
+        # Select shape of the demon's visual field from the list above
+        self.vis_field = large_vf  
+        self.glider_reward_scheme = RewardScheme( \
+                shape_name="Glider",
+                desired_shape=glider)
+
+        #self.glider_reward_scheme_display = 
                      
         # Get the total number of cells in the demon's visual field
         self.vision_size = self.vis_field.sum() - 1
@@ -272,7 +296,7 @@ class MainWindow(Frame):
                 r += 1
         reward = r   
         return reward
-        
+    
     def gun(self):
         # Initialize a "Gosper's glider gun"
         gun_data = np.ones(self.size, dtype="uint8")

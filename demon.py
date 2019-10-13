@@ -86,6 +86,63 @@ class Brain(nn.Module):
         view = F.relu(self.fc2(view))
         q_values = self.fc3(view)
         return q_values
+    
+    
+class RewardScheme:
+    def __init__(self, schemetype="shape", 
+                       shape_name=None,
+                       desired_shape=None):
+        # Scheme types:
+        #  - "shape": get high reward for having the desired shape
+        #      in the visual field.
+        #  - "maximize": get higher reward based on number of live cells
+        #      in the visual field.
+        #  - "minimize": get higher reward based on number of dead cells
+        #      in the visual field
+        self.schemetype = schemetype
+        
+        # Optional name for the desired shape
+        self.shape_name = shape_name
+        
+        # Desired shape: a numpy array of rank 2, representing the desired 
+        #   shape of live/dead cells in the agent's visual field.
+        # Example: If you want the agent to make flippers, do this:
+        #   flipper_scheme = RewardScheme(desired_shape=np.array([[1, 1, 1],
+        #                                                         [0, 0, 0],
+        #                                                         [1, 1, 1]]))
+        # (Hint: it might be better to make a 5x5 grid instead, with "1"s
+        #  all around to keep the flipper isolated)
+        self.desired_shape = desired_shape
+        
+        self.reward = 0
+        
+        if schemetype == "shape":
+            if desired_shape is not None:
+                print("Reward scheme: shape")
+                print("-Make the following shape:")
+                if shape_name is not None:
+                    print(shape_name)
+                    for i in range(len(desired_shape)):
+                        for j in range(len(desired_shape[i])):
+                            if desired_shape[i][j] == 0:
+                                print(" #", end="")
+                            else:
+                                print("  ", end="")
+                        print()
+            else:
+                print("Must provide a desired shape for 'shape' reward scheme")
+        elif schemetype == "maximize":
+            print("Reward scheme: maximize")
+            print("-Maximize live cells")
+        elif schemetype == "minimize":
+            print("Reward scheme: minimize")
+            print("-Minimize live cells")
+            
+    def calc_reward(self, view):
+        # Take in the view
+        if self.schemetype == "shape":
+            pass
+            
             
     
 class ReplayMemory(object):
@@ -228,7 +285,9 @@ class Vision:
                         view[i][j] = 0.8   # Gray - Dead cell in visual field
                     index += 1
                 else: 
-                    view[i][j] = self.environment_data[self.absolute_eye_location[0], self.absolute_eye_location[1]]
+                    view[i][j] = self.environment_data[ \
+                        self.absolute_eye_location[0], 
+                        self.absolute_eye_location[1]]
                     index += 1
         return view
     
