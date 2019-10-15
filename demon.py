@@ -89,9 +89,13 @@ class Brain(nn.Module):
     
     
 class RewardScheme:
-    def __init__(self, schemetype="shape", 
+    def __init__(self, vf,
+                       schemetype="shape", 
                        shape_name=None,
                        desired_shape=None):
+        # The agent's visual field; numpy array of rank 2
+        self.vf = vf
+        
         # Scheme types:
         #  - "shape": get high reward for having the desired shape
         #      in the visual field.
@@ -139,10 +143,31 @@ class RewardScheme:
             print("-Minimize live cells")
             
     def calc_reward(self, view):
-        # Take in the view
+        # Check that the view has the same dimensions as the visual field
+        if self.vf.shape != view.shape:
+            print("ERROR: Reward shape doesn't match visual field shape")
+            return
+        
+        reward = 0
+        
+        vf_helper = np.zeros(self.vf.shape) != self.vf
+        
+        for i in range(len(vf_helper)):
+            for j in range(len(vf_helper[i])):
+                if vf_helper[i][j] == True:
+                    if view[i][j] == self.desired_shape[i][j]:
+                        reward += .5
+        print("View:\n", view)
+        print("Desired shape:\n", self.desired_shape)
+        print(reward)
+        return reward
+        """
         if self.schemetype == "shape":
-            pass
-            
+            for i in range(len(self.vf)):
+                for j in range(len(self.vf[i])):
+                    if self.vf
+                    if view[i][j] == 0
+        """
             
     
 class ReplayMemory(object):

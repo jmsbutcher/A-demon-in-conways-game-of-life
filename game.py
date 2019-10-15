@@ -22,11 +22,13 @@ from tkinter import Tk, Frame, Button, Menu, Label, Canvas, BOTH, BOTTOM, RIGHT,
 from PIL import Image, ImageTk
 
 # Environment shapes; used for making reward schemes
-glider = np.array([[1, 1, 1, 1, 1],
-                   [1, 1, 0, 1, 1],
-                   [1, 1, 1, 0, 1],
-                   [1, 0, 0, 0, 1],
-                   [1, 1, 1, 1, 1]])
+glider = np.array([[1, 1, 1, 1, 1, 1, 1],
+                   [1, 1, 1, 1, 1, 1, 1],
+                   [1, 1, 1, 0, 1, 1, 1],
+                   [1, 1, 1, 1, 0, 1, 1],
+                   [1, 1, 0, 0, 0, 1, 1],
+                   [1, 1, 1, 1, 1, 1, 1],
+                   [1, 1, 1, 1, 1, 1, 1]])
 
 # Visual field shapes
 #   0 - Not part of the visual field
@@ -79,9 +81,9 @@ class MainWindow(Frame):
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
         # Select shape of the demon's visual field from the list above
         self.vis_field = large_vf  
-        self.glider_reward_scheme = RewardScheme( \
-                shape_name="Glider",
-                desired_shape=glider)
+        self.glider_reward_scheme = RewardScheme(self.vis_field,
+                                                 shape_name="Glider",
+                                                 desired_shape=glider)
 
         #self.glider_reward_scheme_display = 
                      
@@ -289,6 +291,9 @@ class MainWindow(Frame):
             self.data[loc[0]][loc[1]] = abs(active_cell - 1)
             
     def get_reward(self):
+        return self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
+        
+        """
         # Calculate reward based on how many live cells are in the visual field
         r = 0
         for cell in self.agent.vision.viewdata:
@@ -296,7 +301,8 @@ class MainWindow(Frame):
                 r += 1
         reward = r   
         return reward
-    
+        """
+        
     def gun(self):
         # Initialize a "Gosper's glider gun"
         gun_data = np.ones(self.size, dtype="uint8")
