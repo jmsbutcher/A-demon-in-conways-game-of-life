@@ -14,7 +14,8 @@ import torch.optim as optim
 
 
 class Agent():
-    def __init__(self, env_data, vf, abs_eye_loc, vision_size, gamma):
+    def __init__(self, env_data, vf, abs_eye_loc, gamma):
+        vision_size = vf.sum() - 1
         self.vision = Vision(env_data, vf, abs_eye_loc)
         self.brain = Brain(vision_size)
         self.gamma = gamma
@@ -147,19 +148,23 @@ class RewardScheme:
         if self.vf.shape != view.shape:
             print("ERROR: Reward shape doesn't match visual field shape")
             return
-        
         reward = 0
-        
+        exact_match = True
         vf_helper = np.zeros(self.vf.shape) != self.vf
-        
         for i in range(len(vf_helper)):
             for j in range(len(vf_helper[i])):
                 if vf_helper[i][j] == True:
                     if view[i][j] == self.desired_shape[i][j]:
-                        reward += .5
-        print("View:\n", view)
-        print("Desired shape:\n", self.desired_shape)
-        print(reward)
+                        reward += 0.1
+                    else:
+                        reward -= 0.1
+                        exact_match = False
+        if exact_match:
+            reward = 10
+            print("EXACT MATCH")
+        #print("View:\n", view)
+        #print("Desired shape:\n", self.desired_shape)
+        #print(reward)
         return reward
         """
         if self.schemetype == "shape":
@@ -233,7 +238,7 @@ class Vision:
         #  - A list of rank 1 numpy arrays of size 2 holding coordinates of  
         #    all the "1"s relative to the eye location
         #  - A numpy array of size 2 holding coordinates of 
-        #    the agent's eye location
+        #    the agent's eye location in the visual field template
         # Example: (all sequences below are numpy arrays)
         #       vf:                    vf_points:                    eye_loc:
         #  [[0, 1, 0],  

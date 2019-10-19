@@ -77,24 +77,20 @@ class MainWindow(Frame):
         self.data = np.ones(self.size, dtype="uint8")  # initialize cell states
         self.running = False    # game is paused until start_game() is called
         self.interval = 0.51    # time between steps; how fast the game runs
-        # Beginning location of demon's eye
+        # Beginning location of demon's eye:
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
-        # Select shape of the demon's visual field from the list above
+        # Select shape of the demon's visual field from the list above:
         self.vis_field = large_vf  
+        # Create glider reward scheme (for testing)
         self.glider_reward_scheme = RewardScheme(self.vis_field,
                                                  shape_name="Glider",
                                                  desired_shape=glider)
-
         #self.glider_reward_scheme_display = 
-                     
-        # Get the total number of cells in the demon's visual field
-        self.vision_size = self.vis_field.sum() - 1
         
         # Create agent object (the demon)
         self.agent = Agent(self.data, 
                            self.vis_field, 
                            self.eye_location, 
-                           self.vision_size, 
                            gamma=0.9)
         
         self.last_reward = 0
@@ -112,14 +108,10 @@ class MainWindow(Frame):
                                      relief="ridge", width=200, bg="gray")
         self.display_console.pack(fill=BOTH, side=RIGHT, expand=1)
         
-        # Display a close-up of what the demon currently sees
-        agentview = self.agent.vision.get_view()
-        scaled_agentview = np.kron(agentview*255, np.ones((self.view_scale, self.view_scale)))
-        scaled_agentview_img = Image.fromarray(scaled_agentview)
-        scaled_agentview_render = ImageTk.PhotoImage(scaled_agentview_img)
-        self.agentview_display = Label(self.display_console, image=scaled_agentview_render)
-        self.agentview_display.image = scaled_agentview_render
+        # Initialize and display a close-up of what the demon currently sees
+        self.agentview_display = Label(self.display_console, image=None)
         self.agentview_display.grid(row=0, columnspan=2)
+        self.display_agent_view()
         
         # Display meter readings in display console
         reward_label = Label(self.display_console, text="Reward", 
@@ -154,24 +146,17 @@ class MainWindow(Frame):
         speed_up_button.pack(side=LEFT, padx=2)
         slow_down_button.pack(side=LEFT, padx=2)
         
-        # Environment Frame: the cell grid
-        self.environment = Frame(self.master, width=win_X, height=win_Y, 
+        # Environment Frame: the main cell grid
+        self.environment = Frame(self.master, 
+                                 width=win_X, 
+                                 height=win_Y, 
                                  bg="black")
         self.environment.pack(fill=BOTH, side=LEFT, expand=1)
         
         # Initialize and display the environment cells
-        colorweighted_data = self.data * 255  # 0 --> 0, 1 --> 255
-        for p in self.agent.vision.absolute_visual_field_points:
-            if 0 <= p[0] < size[0] and 0 <= p[1] < size[1]: # if inside bounds:
-                if colorweighted_data[p[0]][p[1]] == 255:   # if cell is white:
-                    colorweighted_data[p[0]][p[1]] = 204    # make it gray,
-                    colorweighted_data[self.eye_location[0]][self.eye_location[1]] = 255 # unless it's the eye
-        scaled_data = np.kron(colorweighted_data, np.ones((self.scale, self.scale)))
-        raw_img = Image.fromarray(scaled_data)
-        render = ImageTk.PhotoImage(raw_img)
-        self.env_img = Label(self.environment, image=render)
-        self.env_img.image = render
+        self.env_img = Label(self.environment, image=None)
         self.env_img.place(x=0, y=0)
+        self.display_data()
         
         # Menus
         menu = Menu(self.master)
@@ -224,7 +209,7 @@ class MainWindow(Frame):
     def clear(self):
         blank_data = np.ones(self.size, dtype="uint8")
         self.data = blank_data
-        self.display_data(blank_data)
+        self.display_data()
         self.display_agent_view()
         
     def conway_rule(self, x, y):
@@ -249,36 +234,21 @@ class MainWindow(Frame):
         self.agent.vision.environment_data = self.data
         self.agent.vision.update_view()
         view = self.agent.vision.get_view()
-        scaled_data = np.kron(view*255, np.ones((self.view_scale, self.view_scale)))
-        raw_img = Image.fromarray(scaled_data)
-        render = ImageTk.PhotoImage(raw_img)
-        self.agentview_display.configure(image = render)
-        self.agentview_display.image = render
+        colorweighted_data = view * 255
+        self.scale_render_place(colorweighted_data, 
+                                self.view_scale,
+                                self.agentview_display)
     
-    def display_data(self, data):
-        # Take a numpy array of ones and zeros, convert to white (255)
-        # or black (0), scale it (np.kron function), and display it.
-        # <data> must be a numpy array with unsigned ints, dtype = "uint8"
-        # [[1, 1],   scale 2      [[255, 255, 255, 255],
-        #  [0, 1]]    --->         [255, 255, 255, 255],
-        #                          [0,   0,   255, 255],
-        #                          [0,   0,   255, 255]]
-                
-        # Convert data from 1s and 0s to grayscale (0 = black, 255 = white)
-        colorweighted_data = data * 255
-        
+    def display_data(self):
+        # Display the environment data in the main window
+        colorweighted_data = self.data * 255
         # Display white cells in demon's visual field as gray (255 --> 204)
         for p in self.agent.vision.absolute_visual_field_points:
             if 0 <= p[0] < size[0] and 0 <= p[1] < size[1]: 
                 if colorweighted_data[p[0]][p[1]] == 255:
-                    colorweighted_data[p[0]][p[1]] = 204
-                    #colorweighted_data[self.eye_location[0]][self.eye_location[1]] = 255 # Make eye location white
-        
-        scaled_data = np.kron(colorweighted_data, np.ones((self.scale, self.scale)))
-        raw_img = Image.fromarray(scaled_data)
-        render = ImageTk.PhotoImage(raw_img)
-        self.env_img.configure(image = render)
-        self.env_img.image = render
+                    colorweighted_data[p[0]][p[1]] = 200
+                    colorweighted_data[self.eye_location[0]][self.eye_location[1]] = 255 # Make eye location white
+        self.scale_render_place(colorweighted_data, self.scale, self.env_img)
 
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
@@ -317,8 +287,8 @@ class MainWindow(Frame):
         gun_data[x+6][y+11:y+26] = [0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0]
         gun_data[x+7][y+12:y+17] = [0, 1, 1, 1, 0]
         gun_data[x+8][y+13:y+15] = [0, 0]
-        self.display_data(gun_data)
         self.data = gun_data
+        self.display_data()
         self.display_agent_view()
         
     def load(self):
@@ -343,13 +313,29 @@ class MainWindow(Frame):
     def randomize(self):
         # Initialize a random state on the whole grid
         self.data = np.random.randint(0, 2, self.size, dtype="uint8")        
-        self.display_data(self.data)
+        self.display_data()
         self.display_agent_view()
         
     def save(self):
         print("Saving brain...")
         self.agent.save()
         print("Brain saved.")
+        
+    def scale_render_place(self, colorweighted_data, scale, placement_label):
+        # Take a rank 2 numpy array of gray-colorweighted data (each
+        #   value from 0 - 255), scale it according to the integer provided,
+        #   render it, and place it into the Label widget provided.
+        # Example (all arrays are numpy arrays):
+        # colorweighted_data:                scaled_data:
+        #   [[255, 200],   scale 2      [[255, 255, 200, 200],
+        #    [0  , 255]]    --->         [255, 255, 200, 200],
+        #                                [0,   0,   255, 255],
+        #                                [0,   0,   255, 255]]
+        scaled_data = np.kron(colorweighted_data, np.ones((scale, scale)))
+        raw_img = Image.fromarray(scaled_data)
+        render = ImageTk.PhotoImage(raw_img)
+        placement_label.configure(image = render)
+        placement_label.image = render
     
     def seed(self):
         # Initialize a random state in the center 8th of the grid
@@ -363,7 +349,7 @@ class MainWindow(Frame):
                 r = randint(0, 1)
                 seed_data[i][j] = r
         self.data = seed_data
-        self.display_data(seed_data)
+        self.display_data()
         self.display_agent_view()
         
     def slow_down(self):
@@ -388,7 +374,7 @@ class MainWindow(Frame):
                 result = self.conway_rule(x, y)
                 newdata[x][y] = result
         self.data = newdata
-        self.display_data(newdata)
+        self.display_data()
         
         # Update the demon X number of times --- set by self.agent_speed
         for i in range(self.agent_speed):
@@ -396,7 +382,7 @@ class MainWindow(Frame):
             if self.wait == True:
                 break
             self.update()
-            self.display_data(self.data)
+            self.display_data()
             self.display_agent_view()
             time.sleep(self.interval / self.agent_speed)
         self.wait = False
