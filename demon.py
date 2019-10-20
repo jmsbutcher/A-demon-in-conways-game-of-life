@@ -324,6 +324,7 @@ class Vision:
     def move(self, x_shift, y_shift):
         self.absolute_eye_location[0] += x_shift
         self.absolute_eye_location[1] += y_shift
+        self.update_view()
     
     def update_view(self):
         # Update what the agent sees: the state of the cells in its 

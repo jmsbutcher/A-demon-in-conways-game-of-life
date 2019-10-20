@@ -119,7 +119,8 @@ class MainWindow(Frame):
         reward_label.grid(row=1, column=0, padx=4, pady=7, sticky="w")
         self.reward_meter = Canvas(self.display_console, width=100, height=10)
         self.reward_meter.grid(row=1, column=1)
-        self.reward_meter_level = self.reward_meter.create_rectangle(0, 0, 10, 10, fill="blue")
+        self.reward_meter_level = self.reward_meter.create_rectangle( \
+                                  0, 0, 10, 10, fill="blue")
 
         # Bottom Frame: for game control buttons
         button_menu = Frame(self.master, bg="#444444", 
@@ -228,7 +229,7 @@ class MainWindow(Frame):
             # if cell is dead, but has exactly 3 live neighbors...
         elif state == 1 and neighbor_total == 5: return 0   # comes to life
         else: return state
-        
+
     def display_agent_view(self):
         # Update demon view and display it in the display console
         self.agent.vision.environment_data = self.data
@@ -238,27 +239,26 @@ class MainWindow(Frame):
         self.scale_render_place(colorweighted_data, 
                                 self.view_scale,
                                 self.agentview_display)
-    
+
     def display_data(self):
         # Display the environment data in the main window
         colorweighted_data = self.data * 255
         # Display white cells in demon's visual field as gray (255 --> 204)
         for p in self.agent.vision.absolute_visual_field_points:
-            if 0 <= p[0] < size[0] and 0 <= p[1] < size[1]: 
-                if colorweighted_data[p[0]][p[1]] == 255:
-                    colorweighted_data[p[0]][p[1]] = 200
-                    colorweighted_data[self.eye_location[0]][self.eye_location[1]] = 255 # Make eye location white
+            if 0 <= p[0] < self.size[0] and 0 <= p[1] < self.size[1] and \
+                    self.data[tuple(p)] == 1:
+                colorweighted_data[p[0]][p[1]] = 200
+        if self.data[tuple(self.eye_location)] == 1:
+            colorweighted_data[tuple(self.eye_location)] = 255 # Make eye location white
         self.scale_render_place(colorweighted_data, self.scale, self.env_img)
-
+  
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
         # cell at its current location from 1 to 0 or vice versa.
-        loc = self.agent.vision.absolute_eye_location
-        active_cell = self.data[loc[0]][loc[1]]
+        loc = tuple(self.eye_location)
         chance = random.randint(1, chance)
         if chance == 1:
-            # flip 0 to 1 or vice versa at the demon's eye location
-            self.data[loc[0]][loc[1]] = abs(active_cell - 1)
+            self.data[loc] = abs(self.data[loc] - 1)    # flip cell
             
     def get_reward(self):
         return self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
@@ -375,21 +375,22 @@ class MainWindow(Frame):
                 newdata[x][y] = result
         self.data = newdata
         self.display_data()
+        self.display_agent_view()
         
         # Update the demon X number of times --- set by self.agent_speed
         for i in range(self.agent_speed):
             self.update_agent()
-            if self.wait == True:
-                break
             self.update()
             self.display_data()
             self.display_agent_view()
             time.sleep(self.interval / self.agent_speed)
+            if self.wait == True:
+                break
         self.wait = False
         
         self.update()
         time.sleep(self.interval)
-        
+  
     def stop_game(self):
         self.running = False
 
