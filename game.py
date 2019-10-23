@@ -113,14 +113,28 @@ class MainWindow(Frame):
         self.agentview_display.grid(row=0, columnspan=2)
         self.display_agent_view()
         
-        # Display meter readings in display console
-        reward_label = Label(self.display_console, text="Reward", 
-                             relief="groove", bg="#dddddd")
+        # Initialize and display meter readings in display console
+        reward_label = Label(self.display_console, text="Reward:", 
+                             #relief="groove", bg="#dddddd")
+                             fg="white", bg="gray")
         reward_label.grid(row=1, column=0, padx=4, pady=7, sticky="w")
-        self.reward_meter = Canvas(self.display_console, width=100, height=10)
+        self.reward_meter = Canvas(self.display_console, width=100, height=15)
         self.reward_meter.grid(row=1, column=1)
         self.reward_meter_level = self.reward_meter.create_rectangle( \
-                                  0, 0, 10, 10, fill="blue")
+                                  5, 5, 15, 15, width=2, fill="black")
+        
+        # Initialize and display reward scheme in display console
+        reward_scheme_label = Label(self.display_console, 
+                                    text="\nCurrent reward scheme:", 
+                                    fg="white", bg="gray")
+        reward_scheme_label.grid(row=2, columnspan=2, pady=10, sticky="s")
+        reward_scheme_name = Label(self.display_console, 
+                                    text="Produce this shape:", 
+                                    fg="white", bg="gray")
+        reward_scheme_name.grid(row=3, columnspan=2, pady=10, sticky="s")        
+        self.reward_scheme_view = Label(self.display_console, image=None)
+        self.reward_scheme_view.grid(row=4, columnspan=2)
+        self.display_reward_scheme()
 
         # Bottom Frame: for game control buttons
         button_menu = Frame(self.master, bg="#444444", 
@@ -251,6 +265,15 @@ class MainWindow(Frame):
         if self.data[tuple(self.eye_location)] == 1:
             colorweighted_data[tuple(self.eye_location)] = 255 # Make eye location white
         self.scale_render_place(colorweighted_data, self.scale, self.env_img)
+        
+    def display_reward_scheme(self):
+        colorweighted_data = self.glider_reward_scheme.desired_shape * 255
+        for i in range(len(self.vis_field)):
+            for j in range(len(self.vis_field[i])):
+                if self.vis_field[i][j] == 1 and colorweighted_data[i][j] == 255:
+                    colorweighted_data[i][j] = 200
+        self.scale_render_place(colorweighted_data, self.view_scale,
+                                self.reward_scheme_view)
   
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
@@ -261,9 +284,10 @@ class MainWindow(Frame):
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
             
     def get_reward(self):
-        return self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
         
-        """
+        #return self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
+        
+
         # Calculate reward based on how many live cells are in the visual field
         r = 0
         for cell in self.agent.vision.viewdata:
@@ -271,7 +295,7 @@ class MainWindow(Frame):
                 r += 1
         reward = r   
         return reward
-        """
+
         
     def gun(self):
         # Initialize a "Gosper's glider gun"
@@ -409,7 +433,18 @@ class MainWindow(Frame):
         reward_meter_scale = 5
         x0, y0, x1, y1 = self.reward_meter.coords(self.reward_meter_level)
         x1 = reward_meter_scale * self.last_reward
-        self.reward_meter.coords(self.reward_meter_level, x0, y0, x1, y1)
+        self.reward_meter.coords(self.reward_meter_level, x0, y0, x1, y1)        
+        if x1 > 80: 
+            color = "green yellow"
+        elif x1 > 60: 
+            color = "yellow2"
+        elif x1 > 40:
+            color = "orange"
+        elif x1 > 20:
+            color = "red"
+        else:
+            color = "black"
+        self.reward_meter.itemconfig(self.reward_meter_level, fill=color)
 
 
 root = Tk()
