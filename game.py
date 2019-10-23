@@ -77,12 +77,14 @@ class MainWindow(Frame):
         self.data = np.ones(self.size, dtype="uint8")  # initialize cell states
         self.running = False    # game is paused until start_game() is called
         self.interval = 0.51    # time between steps; how fast the game runs
+        self.generation = 0     # how many steps (generations) has passed
         # Beginning location of demon's eye:
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
         # Select shape of the demon's visual field from the list above:
         self.vis_field = large_vf  
         # Create glider reward scheme (for testing)
         self.glider_reward_scheme = RewardScheme(self.vis_field,
+                                                 schemetype="Shape",
                                                  shape_name="Glider",
                                                  desired_shape=glider)
         #self.glider_reward_scheme_display = 
@@ -108,33 +110,51 @@ class MainWindow(Frame):
                                      relief="ridge", width=200, bg="gray")
         self.display_console.pack(fill=BOTH, side=RIGHT, expand=1)
         
+        # Initialize and display generation count
+        generation_label = Label(self.display_console, text="Gen#:",
+                                      fg="white", bg="gray")
+        generation_label.grid(row=0, column=0)
+        self.generation_count = Label(self.display_console, 
+                                      text=str(self.generation),
+                                      font=("Arial", 20), 
+                                      fg="white", bg="gray")
+        self.generation_count.grid(row=0, column=1, sticky="w")
+        
         # Initialize and display a close-up of what the demon currently sees
         self.agentview_display = Label(self.display_console, image=None)
-        self.agentview_display.grid(row=0, columnspan=2)
+        self.agentview_display.grid(row=1, columnspan=2)
         self.display_agent_view()
         
         # Initialize and display meter readings in display console
         reward_label = Label(self.display_console, text="Reward:", 
                              #relief="groove", bg="#dddddd")
                              fg="white", bg="gray")
-        reward_label.grid(row=1, column=0, padx=4, pady=7, sticky="w")
+        reward_label.grid(row=2, column=0, padx=4, pady=7, sticky="w")
         self.reward_meter = Canvas(self.display_console, width=100, height=15)
-        self.reward_meter.grid(row=1, column=1)
+        self.reward_meter.grid(row=2, column=1)
         self.reward_meter_level = self.reward_meter.create_rectangle( \
-                                  5, 5, 15, 15, width=2, fill="black")
+                                  5, 5, 6, 15, width=1, fill="black")
         
         # Initialize and display reward scheme in display console
         reward_scheme_label = Label(self.display_console, 
                                     text="\nCurrent reward scheme:", 
                                     fg="white", bg="gray")
-        reward_scheme_label.grid(row=2, columnspan=2, pady=10, sticky="s")
+        reward_scheme_label.grid(row=4, columnspan=2, pady=10, sticky="s")
         reward_scheme_name = Label(self.display_console, 
                                     text="Produce this shape:", 
                                     fg="white", bg="gray")
-        reward_scheme_name.grid(row=3, columnspan=2, pady=10, sticky="s")        
+        reward_scheme_name.grid(row=5, columnspan=2, pady=10, sticky="s")        
         self.reward_scheme_view = Label(self.display_console, image=None)
-        self.reward_scheme_view.grid(row=4, columnspan=2)
+        self.reward_scheme_view.grid(row=6, columnspan=2)
         self.display_reward_scheme()
+        
+        self.message_box = Frame(self.display_console, 
+                                 borderwidth=2,
+                                 relief=None, 
+                                 width=180,
+                                 height=180,
+                                 bg="gray")
+        self.message_box.grid(row=7, columnspan=2, pady= 10)
 
         # Bottom Frame: for game control buttons
         button_menu = Frame(self.master, bg="#444444", 
@@ -222,10 +242,12 @@ class MainWindow(Frame):
             self.flip_cell()                # ; print("Flipped", end=" ")
             
     def clear(self):
+        self.generation = 0
         blank_data = np.ones(self.size, dtype="uint8")
         self.data = blank_data
         self.display_data()
         self.display_agent_view()
+        
         
     def conway_rule(self, x, y):
         # Get state of cell at coordinates (x, y) and those of its neighbors
@@ -284,10 +306,19 @@ class MainWindow(Frame):
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
             
     def get_reward(self):
-        
-        #return self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
-        
+        r = self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
+        count = 1
+        if r == 10:
+            exact_match_msg = Label(self.message_box, 
+                                    text="Exact Match {0:2d}\n"
+                                    "Generation: {1:}".format( \
+                                                 count, self.generation),
+                                    fg="white", bg="gray")
+            exact_match_msg.pack()
+            count += 1
+        return r
 
+        """
         # Calculate reward based on how many live cells are in the visual field
         r = 0
         for cell in self.agent.vision.viewdata:
@@ -295,10 +326,11 @@ class MainWindow(Frame):
                 r += 1
         reward = r   
         return reward
-
+        """
         
     def gun(self):
         # Initialize a "Gosper's glider gun"
+        self.generation = 0
         gun_data = np.ones(self.size, dtype="uint8")
         x = 5
         y = 5
@@ -336,6 +368,7 @@ class MainWindow(Frame):
         
     def randomize(self):
         # Initialize a random state on the whole grid
+        self.generation = 0
         self.data = np.random.randint(0, 2, self.size, dtype="uint8")        
         self.display_data()
         self.display_agent_view()
@@ -363,6 +396,7 @@ class MainWindow(Frame):
     
     def seed(self):
         # Initialize a random state in the center 8th of the grid
+        self.generation = 0
         seed_data = np.ones(self.size, dtype="uint8")
         dx = self.size[0] // 8
         midx = self.size[0] // 2
@@ -414,6 +448,8 @@ class MainWindow(Frame):
         
         self.update()
         time.sleep(self.interval)
+        self.generation += 1
+        self.generation_count.config(text=str(self.generation))
   
     def stop_game(self):
         self.running = False
@@ -430,9 +466,11 @@ class MainWindow(Frame):
         self.update_meters()
         
     def update_meters(self):        
-        reward_meter_scale = 5
+        reward_meter_scale = 10
         x0, y0, x1, y1 = self.reward_meter.coords(self.reward_meter_level)
         x1 = reward_meter_scale * self.last_reward
+        if x1 < 2:
+            x1 = 2
         self.reward_meter.coords(self.reward_meter_level, x0, y0, x1, y1)        
         if x1 > 80: 
             color = "green yellow"
@@ -450,7 +488,7 @@ class MainWindow(Frame):
 root = Tk()
 root.title("A Demon In Conway's Game Of Life")
         
-size = (50, 50)     # Default: (50, 50)
+size = (30, 30)     # Default: (50, 50)
 scale = 10          # Default: 10 
 
 main_window = MainWindow(root, size, scale)

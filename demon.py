@@ -91,7 +91,7 @@ class Brain(nn.Module):
     
 class RewardScheme:
     def __init__(self, vf,
-                       schemetype="shape", 
+                       schemetype, 
                        shape_name=None,
                        desired_shape=None):
         # The agent's visual field; numpy array of rank 2
@@ -104,7 +104,7 @@ class RewardScheme:
         #      in the visual field.
         #  - "minimize": get higher reward based on number of dead cells
         #      in the visual field
-        self.schemetype = schemetype
+        self.schemetype = schemetype.lower()
         
         # Optional name for the desired shape
         self.shape_name = shape_name
@@ -155,7 +155,7 @@ class RewardScheme:
             for j in range(len(vf_helper[i])):
                 if vf_helper[i][j] == True:
                     if view[i][j] == self.desired_shape[i][j]:
-                        reward += 0.1
+                        reward += 1.1
                     else:
                         reward -= 0.1
                         exact_match = False
