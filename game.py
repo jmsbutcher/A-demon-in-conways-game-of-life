@@ -30,6 +30,15 @@ glider = np.array([[1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1, 1, 1]])
 
+flipper = np.array([[1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 0, 0, 0, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1],
+                    [1, 1, 1, 1, 1, 1, 1]])
+
+
 # Visual field shapes
 #   0 - Not part of the visual field
 #   1 - Part of the visual field
@@ -83,27 +92,29 @@ class MainWindow(Frame):
         # Select shape of the demon's visual field from the list above:
         self.vis_field = large_vf  
         # Create glider reward scheme (for testing)
-        self.glider_reward_scheme = RewardScheme(self.vis_field,
-                                                 schemetype="Shape",
-                                                 shape_name="Glider",
-                                                 desired_shape=glider)
-        #self.glider_reward_scheme_display = 
+        self.match_count = 0
+        self.reward_scheme = RewardScheme(self.vis_field,
+                                                 schemetype="shape",
+                                                 shape_name="Flipper",
+                                                 desired_shape=flipper)
         
         # Create agent object (the demon)
         self.agent = Agent(self.data, 
                            self.vis_field, 
                            self.eye_location, 
                            gamma=0.9)
+        self.agent.vision.update(self.data)
         
         self.last_reward = 0
         self.agent_speed = 10 # How many times the demon updates every game step
         self.wait = False     # Allows the demon to wait until the next step
         
         # Calculate size of app window
-        win_X = self.size[1] * self.scale + 188
+        win_X = self.size[1] * self.scale + 193
         win_Y = self.size[0] * self.scale + 50
         self.master.geometry("{width}x{height}".format(width=win_X, height=win_Y))
-        self.master.minsize(win_X, win_Y)
+        #self.master.minsize(win_X, win_Y)
+        self.master.minsize(max(win_X, 690), max(win_Y, 551))
         
         # Right Frame, Display Console: for displaying demon's readouts
         self.display_console = Frame(self.master, borderwidth=5,
@@ -111,7 +122,7 @@ class MainWindow(Frame):
         self.display_console.pack(fill=BOTH, side=RIGHT, expand=1)
         
         # Initialize and display generation count
-        generation_label = Label(self.display_console, text="Gen#:",
+        generation_label = Label(self.display_console, text="Gen #:",
                                       fg="white", bg="gray")
         generation_label.grid(row=0, column=0)
         self.generation_count = Label(self.display_console, 
@@ -141,7 +152,7 @@ class MainWindow(Frame):
                                     fg="white", bg="gray")
         reward_scheme_label.grid(row=4, columnspan=2, pady=10, sticky="s")
         reward_scheme_name = Label(self.display_console, 
-                                    text="Produce this shape:", 
+                                    text="Produce this shape:",
                                     fg="white", bg="gray")
         reward_scheme_name.grid(row=5, columnspan=2, pady=10, sticky="s")        
         self.reward_scheme_view = Label(self.display_console, image=None)
@@ -151,8 +162,8 @@ class MainWindow(Frame):
         self.message_box = Frame(self.display_console, 
                                  borderwidth=2,
                                  relief=None, 
-                                 width=180,
-                                 height=180,
+                                 #width=180,
+                                 #height=180,
                                  bg="gray")
         self.message_box.grid(row=7, columnspan=2, pady= 10)
 
@@ -227,7 +238,7 @@ class MainWindow(Frame):
         # 3 --> Move down
         # 4 --> Move left
         # 5 --> Flip cell
-        loc = self.agent.vision.absolute_eye_location # Demon's (x, y) location
+        loc = self.agent.vision.eye_location # Demon's (x, y) location
         if a == 0:
             self.wait = True                # ; print("Wait", end=" ")
         elif a == 1 and loc[0] < size[0]-1:
@@ -245,6 +256,7 @@ class MainWindow(Frame):
         self.generation = 0
         blank_data = np.ones(self.size, dtype="uint8")
         self.data = blank_data
+        self.agent.vision.update(blank_data)
         self.display_data()
         self.display_agent_view()
         
@@ -267,33 +279,62 @@ class MainWindow(Frame):
         else: return state
 
     def display_agent_view(self):
-        # Update demon view and display it in the display console
-        self.agent.vision.environment_data = self.data
-        self.agent.vision.update_view()
+        # Display a close-up of the demon's view in the display console
         view = self.agent.vision.get_view()
-        colorweighted_data = view * 255
+        img_data = np.ones(view.shape, dtype="float")
+        for i in range(len(view)):
+            for j in range(len(view[i])):
+                if view[i][j] is not None:
+                    if view[i][j] == 1 and self.vis_field[i][j] != 2:
+                        img_data[i][j] = 0.8
+                    elif view[i][j] == 0:
+                        img_data[i][j] = 0
+        colorweighted_data = img_data * 255
         self.scale_render_place(colorweighted_data, 
                                 self.view_scale,
                                 self.agentview_display)
 
     def display_data(self):
-        # Display the environment data in the main window
+        # Display the environment in the main window
         colorweighted_data = self.data * 255
-        # Display white cells in demon's visual field as gray (255 --> 204)
-        for p in self.agent.vision.absolute_visual_field_points:
-            if 0 <= p[0] < self.size[0] and 0 <= p[1] < self.size[1] and \
-                    self.data[tuple(p)] == 1:
-                colorweighted_data[p[0]][p[1]] = 200
-        if self.data[tuple(self.eye_location)] == 1:
-            colorweighted_data[tuple(self.eye_location)] = 255 # Make eye location white
+        eye_x, eye_y = self.agent.vision.eye_location
+        vf = self.vis_field
+        # Find local eye location in visual field template
+        for i in range(len(vf)):
+            for j in range(len(vf[i])):
+                if vf[i][j] == 2:
+                    loc_eye_x, loc_eye_y = i, j
+        # Make visual field appear gray so it can be seen in environment
+        for i in range(len(vf)):
+            for j in range(len(vf[i])):
+                x = i + eye_x - loc_eye_x
+                y = j + eye_y - loc_eye_y
+                # Keep the eye white
+                if x == eye_x and y == eye_y:
+                    continue
+                # If within visual field and within bounds of the env. :
+                if 0 <= x < self.size[0] and 0 <= y < self.size[1]:
+                    if colorweighted_data[x][y] == 255 and vf[i][j] > 0:
+                        colorweighted_data[x][y] = 200
         self.scale_render_place(colorweighted_data, self.scale, self.env_img)
-        
+
     def display_reward_scheme(self):
-        colorweighted_data = self.glider_reward_scheme.desired_shape * 255
-        for i in range(len(self.vis_field)):
-            for j in range(len(self.vis_field[i])):
-                if self.vis_field[i][j] == 1 and colorweighted_data[i][j] == 255:
-                    colorweighted_data[i][j] = 200
+        rshape = self.reward_scheme.desired_shape
+        colorweighted_data = np.ones(rshape.shape)
+        for i in range(len(rshape)):
+            for j in range(len(rshape[i])):
+                if self.vis_field[i][j] == 0:
+                    colorweighted_data[i][j] = 255
+                elif self.vis_field[i][j] == 1:
+                    if rshape[i][j] == 1:
+                        colorweighted_data[i][j] = 200
+                    else:
+                        colorweighted_data[i][j] = 0
+                elif self.vis_field[i][j] == 2:
+                    if rshape[i][j] == 1:
+                        colorweighted_data[i][j] = 255
+                    else:
+                        colorweighted_data[i][j] = 0
         self.scale_render_place(colorweighted_data, self.view_scale,
                                 self.reward_scheme_view)
   
@@ -306,18 +347,17 @@ class MainWindow(Frame):
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
             
     def get_reward(self):
-        r = self.glider_reward_scheme.calc_reward(self.agent.vision.get_view())
-        count = 1
+        r = self.reward_scheme.calc_reward(self.agent.vision.get_view())
         if r == 10:
+            self.match_count += 1 
             exact_match_msg = Label(self.message_box, 
                                     text="Exact Match {0:2d}\n"
                                     "Generation: {1:}".format( \
-                                                 count, self.generation),
+                                                 self.match_count, 
+                                                 self.generation),
                                     fg="white", bg="gray")
             exact_match_msg.pack()
-            count += 1
         return r
-
         """
         # Calculate reward based on how many live cells are in the visual field
         r = 0
@@ -344,18 +384,19 @@ class MainWindow(Frame):
         gun_data[x+7][y+12:y+17] = [0, 1, 1, 1, 0]
         gun_data[x+8][y+13:y+15] = [0, 0]
         self.data = gun_data
+        self.agent.vision.update(gun_data)
         self.display_data()
         self.display_agent_view()
         
     def load(self):
         print("Loading last saved brain...")
         self.agent.load()
-        
+            
     def move_chance(self, chance=10):
         # When called, demon has a 1 in <chance> chance of moving in one
         # of four directions.
         # Increasing <chance> decreases the chance of moving.
-        loc = self.agent.vision.absolute_eye_location
+        loc = self.agent.vision.eye_location
         chance = random.randint(0, chance)
         if chance == 1 and loc[0] < size[0]-1:
             self.agent.vision.move(1, 0)
@@ -369,7 +410,8 @@ class MainWindow(Frame):
     def randomize(self):
         # Initialize a random state on the whole grid
         self.generation = 0
-        self.data = np.random.randint(0, 2, self.size, dtype="uint8")        
+        self.data = np.random.randint(0, 2, self.size, dtype="uint8")  
+        self.agent.vision.update(self.data)
         self.display_data()
         self.display_agent_view()
         
@@ -407,6 +449,7 @@ class MainWindow(Frame):
                 r = randint(0, 1)
                 seed_data[i][j] = r
         self.data = seed_data
+        self.agent.vision.update(seed_data)
         self.display_data()
         self.display_agent_view()
         
@@ -417,7 +460,7 @@ class MainWindow(Frame):
         if self.interval > 0.1:
             self.interval -= 0.1
         else:
-            self.interval = 0.01
+            self.interval = 0
         
     def start_game(self):
         self.running = True
@@ -432,6 +475,7 @@ class MainWindow(Frame):
                 result = self.conway_rule(x, y)
                 newdata[x][y] = result
         self.data = newdata
+        self.agent.vision.update(newdata)
         self.display_data()
         self.display_agent_view()
         
@@ -441,6 +485,7 @@ class MainWindow(Frame):
             self.update()
             self.display_data()
             self.display_agent_view()
+            self.update_meters()
             time.sleep(self.interval / self.agent_speed)
             if self.wait == True:
                 break
@@ -455,15 +500,15 @@ class MainWindow(Frame):
         self.running = False
 
     def update_agent(self):
-        view = self.agent.vision.viewdata
-        for v in range(0, len(view)):
-            if view[v] is None:     # Treat cells off the edge of the grid as
-                view[v] = 1         # dead for learning and acting purposes
+        self.agent.vision.update(self.data)
+        viewdata = self.agent.vision.get_viewdata()
+        # Treat cells off the edge of the environment grid as dead: 1, not None
+        viewdata = [1 if x is None else x for x in viewdata]
         reward = self.get_reward()
-        action = self.agent.update(reward, view)
-        self.act(action)
+        action = self.agent.update(reward, viewdata)
+        self.act(action)        
+        self.agent.vision.update(self.data)
         self.last_reward = reward
-        self.update_meters()
         
     def update_meters(self):        
         reward_meter_scale = 10
@@ -488,7 +533,7 @@ class MainWindow(Frame):
 root = Tk()
 root.title("A Demon In Conway's Game Of Life")
         
-size = (30, 30)     # Default: (50, 50)
+size = (20, 20)     # Default: (50, 50)
 scale = 10          # Default: 10 
 
 main_window = MainWindow(root, size, scale)
