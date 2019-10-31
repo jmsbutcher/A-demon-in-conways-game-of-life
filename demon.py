@@ -59,19 +59,30 @@ class Agent():
         self.last_reward = reward
         return action
     
-    def save(self):
-        torch.save({"state_dict": self.brain.state_dict(),
+    def save(self, name=""):
+        if name == "":
+            torch.save({"state_dict": self.brain.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
-                    }, "last_brain.pth")
-    
-    def load(self):
-        if os.path.isfile('last_brain.pth'):
-            checkpoint = torch.load('last_brain.pth')
-            self.brain.load_state_dict(checkpoint['state_dict'])
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
-            print("done !")
+                    }, "Saved_brains/last_brain.pth")
+            print("Brain saved as last_brain.pth.")
+            return
         else:
-            print("no saved brain found...")
+            torch.save({"state_dict": self.brain.state_dict(),
+                    "optimizer": self.optimizer.state_dict(),
+                    }, "Saved_brains/{}.pth".format(name))
+            print("Brain saved as {}".format(str(name)))
+            return
+    
+    def load(self, name):
+        if os.path.isfile(name):
+            checkpoint = torch.load(name)
+            self.brain.load_state_dict(checkpoint["state_dict"])
+            self.optimizer.load_state_dict(checkpoint["optimizer"])
+            print("Loaded {}.".format(name))
+            return
+        else:
+            print("Cancelled loading brain.")
+            return
     
     
 class Brain(nn.Module):

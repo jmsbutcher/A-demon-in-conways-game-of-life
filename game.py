@@ -18,7 +18,10 @@ import random
 from random import randint
 import time
 import numpy as np
-from tkinter import Tk, Frame, Button, Menu, Label, Canvas, BOTH, BOTTOM, RIGHT, LEFT
+
+from tkinter import Tk, Frame, Button, Menu, Label, Canvas, \
+                    BOTH, BOTTOM, RIGHT, LEFT, Toplevel, Entry, filedialog
+                    
 from PIL import Image, ImageTk
 
 # Environment shapes; used for making reward schemes
@@ -75,6 +78,23 @@ small_vf = np.array( \
      [0, 1, 1, 1, 0],
      [0, 0, 1, 0, 0]])
 
+class SaveWindow(Frame):
+    def __init__(self, master, agent):
+        self.agent = agent
+        top = self.top = Toplevel(master)
+        self.top.geometry("350x150")
+        save_message = Label(top, text="Enter name of saved brain:")
+        save_message.pack()
+        self.entry = Entry(top)
+        self.entry.pack()
+        ok_button = Button(top, text="OK", command=self.execute)
+        ok_button.pack()
+        
+    def execute(self):
+        value = self.entry.get()
+        self.agent.save(value)
+        self.top.destroy()
+        
 
 class MainWindow(Frame):
     def __init__(self, master=None, size=(50, 50), scale=10):
@@ -390,7 +410,10 @@ class MainWindow(Frame):
         
     def load(self):
         print("Loading last saved brain...")
-        self.agent.load()
+        brain_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Saved_brains", 
+            title="Select file",
+            filetypes=[("Path file", "*.pth")])
+        self.agent.load(brain_filename)
             
     def move_chance(self, chance=10):
         # When called, demon has a 1 in <chance> chance of moving in one
@@ -417,8 +440,8 @@ class MainWindow(Frame):
         
     def save(self):
         print("Saving brain...")
-        self.agent.save()
-        print("Brain saved.")
+        save_popup = SaveWindow(self.master, self.agent)
+        self.master.wait_window(save_popup.top)
         
     def scale_render_place(self, colorweighted_data, scale, placement_label):
         # Take a rank 2 numpy array of gray-colorweighted data (each
