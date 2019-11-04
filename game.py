@@ -105,7 +105,7 @@ class MainWindow(Frame):
         self.view_scale = 15    # pixel size of agent view in display console
         self.data = np.ones(self.size, dtype="uint8")  # initialize cell states
         self.running = False    # game is paused until start_game() is called
-        self.interval = 0.51    # time between steps; how fast the game runs
+        self.interval = 0.5    # time between steps; how fast the game runs
         self.generation = 0     # how many steps (generations) has passed
         # Beginning location of demon's eye:
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
@@ -377,6 +377,9 @@ class MainWindow(Frame):
                                                  self.generation),
                                     fg="white", bg="gray")
             exact_match_msg.pack()
+            print("EXACT MATCH {0:2d} - Generation {1:2d}".format( \
+                                                 self.match_count,
+                                                 self.generation))
         return r
         """
         # Calculate reward based on how many live cells are in the visual field

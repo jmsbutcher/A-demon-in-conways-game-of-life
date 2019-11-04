@@ -171,7 +171,6 @@ class RewardScheme:
                         exact_match = False
         if exact_match:
             reward = 10
-            print("EXACT MATCH")
         return reward
             
     
