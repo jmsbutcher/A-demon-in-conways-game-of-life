@@ -29,6 +29,10 @@ class Agent():
         #print("Q-values:", self.brain(state))               # For debugging
         probabilities = F.softmax(self.brain(state), dim=1)
         #print("Action Probabilities: ", probabilities)      # For debugging
+        for p in probabilities[0]:
+            if p <= 0:
+                print("Warning: Encountered Q-value less than 0")
+                return 0
         action = probabilities.multinomial(num_samples=1)
         return action.data[0]
     

@@ -77,23 +77,6 @@ small_vf = np.array( \
      [1, 1, 2, 1, 1],
      [0, 1, 1, 1, 0],
      [0, 0, 1, 0, 0]])
-
-class SaveWindow(Frame):
-    def __init__(self, master, agent):
-        self.agent = agent
-        top = self.top = Toplevel(master)
-        self.top.geometry("350x150")
-        save_message = Label(top, text="Enter name of saved brain:")
-        save_message.pack()
-        self.entry = Entry(top)
-        self.entry.pack()
-        ok_button = Button(top, text="OK", command=self.execute)
-        ok_button.pack()
-        
-    def execute(self):
-        value = self.entry.get()
-        self.agent.save(value)
-        self.top.destroy()
         
 
 class MainWindow(Frame):
@@ -192,7 +175,7 @@ class MainWindow(Frame):
                             relief="ridge", borderwidth=5)
         button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)  
         
-        quit_button = Button(button_menu, text="Quit", command=self.master.quit)
+        quit_button = Button(button_menu, text="Quit", command=close)
         seed_button = Button(button_menu, text="Seed", command=self.seed)
         random_button = Button(button_menu, text="Random", command=self.randomize)
         clear_button = Button(button_menu, text="Clear", command=self.clear)
@@ -229,9 +212,10 @@ class MainWindow(Frame):
         self.master.config(menu=menu)
         
         file = Menu(menu)
-        file.add_command(label="Exit", command=self.master.quit)
+        file.add_command(label="Exit", command=close)
         file.add_command(label="Save", command=self.save)
         file.add_command(label="Load", command=self.load)
+        file.add_command(label="Settings", command=self.change_settings)
         
         new = Menu(menu)
         new.add_command(label="Random", command = self.randomize)
@@ -249,6 +233,10 @@ class MainWindow(Frame):
         menu.add_cascade(label="File", menu=file)
         menu.add_cascade(label="New", menu=new)
         menu.add_cascade(label="Run", menu=run)
+        
+        # Key Bindings
+        #self.bind("<Up>", lambda: self.act(1))
+        #master.bind("<Button-1>", self.clear)
     
     def act(self, a):
         # Make demon take an action based on int parameter <a>:
@@ -261,11 +249,11 @@ class MainWindow(Frame):
         loc = self.agent.vision.eye_location # Demon's (x, y) location
         if a == 0:
             self.wait = True                # ; print("Wait", end=" ")
-        elif a == 1 and loc[0] < size[0]-1:
+        elif a == 1 and loc[0] < self.size[0]-1:
             self.agent.vision.move(1, 0)    # ; print("Up", end=" ")
         elif a == 2 and loc[0] > 0:
             self.agent.vision.move(-1, 0)   # ; print("Down", end=" ")
-        elif a == 3 and loc[1] < size[1]-1:
+        elif a == 3 and loc[1] < self.size[1]-1:
             self.agent.vision.move(0, 1)    # ; print("Left", end=" ")
         elif a == 4 and loc[1] > 0:
             self.agent.vision.move(0, -1)   # ; print("Right", end=" ")
@@ -280,6 +268,31 @@ class MainWindow(Frame):
         self.display_data()
         self.display_agent_view()
         
+    def change_settings(self):
+        settings_popup = SettingsWindow(self.master, self)
+        self.master.wait_window(settings_popup.top)
+        
+    def change_agent_speed(self, newspeed):
+        self.agent_speed = newspeed
+        
+    def change_environment_grid(self, newwidth, newheight, newscale):
+        #print("1")
+        oldsize = self.size
+        self.size = (newwidth, newheight)
+        #print(self.size)
+        self.scale = newscale
+        #print(self.scale)
+        old_data = self.data
+        self.data = np.ones(self.size, dtype="uint8")
+        for i in range(min(len(old_data), len(self.data))):
+            for j in range(min(len(old_data[i]), len(self.data[i]))):
+                self.data[i][j] = old_data[i][j]
+        if newwidth < oldsize[0] or newheight < oldsize[1]:
+            self.agent.vision.eye_location = np.array((self.size[0]//2, 
+                                                       self.size[1]//2))
+        self.agent.vision.update(self.data)
+        self.display_agent_view()
+        self.display_data()
         
     def conway_rule(self, x, y):
         # Get state of cell at coordinates (x, y) and those of its neighbors
@@ -361,7 +374,7 @@ class MainWindow(Frame):
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
         # cell at its current location from 1 to 0 or vice versa.
-        loc = tuple(self.eye_location)
+        loc = tuple(self.agent.vision.eye_location)
         chance = random.randint(1, chance)
         if chance == 1:
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
@@ -554,10 +567,151 @@ class MainWindow(Frame):
         else:
             color = "black"
         self.reward_meter.itemconfig(self.reward_meter_level, fill=color)
-
-
+        
+        
+class SaveWindow(Frame):
+    def __init__(self, master, agent):
+        self.agent = agent
+        top = self.top = Toplevel(master)
+        top.title("Save")
+        self.top.geometry("350x150")
+        save_message = Label(top, text="Enter name of saved brain:")
+        save_message.pack()
+        self.entry = Entry(top)
+        self.entry.pack()
+        ok_button = Button(top, text="OK", command=self.execute)
+        ok_button.pack()
+        
+    def execute(self):
+        value = self.entry.get()
+        self.agent.save(value)
+        self.top.destroy()
+        
+        
+class SettingsWindow(Frame):
+    def __init__(self, master, main_window):
+        """
+        self.main_window = main_window
+        top = self.top = Toplevel(master)
+        top.title("Settings")
+        self.top.geometry("300x180")
+        
+        speed_label = Label(top, text="Agent Speed (actions per game step):")
+        speed_label.grid(row=0, column=0, sticky="e")
+        self.speed_entry = Entry(top, width=3)
+        self.speed_entry.grid(row=0, column=1, sticky="w")
+        self.speed_entry.insert(0, str(self.main_window.agent_speed))
+        
+        grid_width_label = Label(top, text="Environment width:")
+        grid_width_label.grid(row=1, column=0, sticky="e")
+        self.grid_width_entry = Entry(top, width=3)
+        self.grid_width_entry.grid(row=1, column=1, sticky="w")
+        self.grid_width_entry.insert(0, str(self.main_window.size[0]))
+        
+        grid_height_label = Label(top, text="Environment height:")
+        grid_height_label.grid(row=2, column=0, sticky="e")
+        self.grid_height_entry = Entry(top, width=3)
+        self.grid_height_entry.grid(row=2, column=1, sticky="w")
+        self.grid_height_entry.insert(0, str(self.main_window.size[1]))
+        
+        scale_label = Label(top, text="Scale:")
+        scale_label.grid(row=3, column=0, sticky="e")
+        self.scale_entry = Entry(top, width=3)
+        self.scale_entry.grid(row=3, column=1, sticky="w")
+        self.scale_entry.insert(0, str(self.main_window.scale))
+        
+        ok_button = Button(top, text="OK", command=self.execute)#, 
+                           #width=4, height=2)
+        ok_button.bind("<Enter>", self.execute)
+        ok_button.grid(row=4, column=0)
+        """
+        
+        self.main_window = main_window
+        top = self.top = Toplevel(master)
+        self.top.title("Settings")
+        #self.top.geometry("300x180")
+        
+        s = Frame(top, borderwidth=10, bg="gray")
+        #s.bind("<Return>", self.execute)
+        s.pack()
+        speed_label = Label(s, text="Agent Speed (actions per game step):")
+        speed_label.grid(row=0, column=0, sticky="e")
+        self.speed_entry = Entry(s, width=3)
+        self.speed_entry.bind("<Return>", self.execute)
+        self.speed_entry.grid(row=0, column=1, sticky="w")
+        self.speed_entry.insert(0, str(self.main_window.agent_speed))
+        
+        grid_width_label = Label(s, text="Environment width:")
+        grid_width_label.grid(row=1, column=0, sticky="e")
+        self.grid_width_entry = Entry(s, width=3)
+        self.grid_width_entry.bind("<Return>", self.execute)
+        self.grid_width_entry.grid(row=1, column=1, sticky="w")
+        self.grid_width_entry.insert(0, str(self.main_window.size[0]))
+        
+        grid_height_label = Label(s, text="Environment height:")
+        grid_height_label.grid(row=2, column=0, sticky="e")
+        self.grid_height_entry = Entry(s, width=3)
+        self.grid_height_entry.bind("<Return>", self.execute)
+        self.grid_height_entry.grid(row=2, column=1, sticky="w")
+        self.grid_height_entry.insert(0, str(self.main_window.size[1]))
+        
+        scale_label = Label(s, text="Scale:")
+        scale_label.grid(row=3, column=0, sticky="e")
+        self.scale_entry = Entry(s, width=3)
+        self.scale_entry.bind("<Return>", self.execute)
+        self.scale_entry.grid(row=3, column=1, sticky="w")
+        self.scale_entry.insert(0, str(self.main_window.scale))
+        
+        ok_button = Button(s, text="OK", command=self.execute)
+        ok_button.bind("<Return>", self.execute)
+        ok_button.grid(row=4, column=0)
+        
+        
+    def execute(self, event):
+        speed = int(self.speed_entry.get())
+        grid_width = int(self.grid_width_entry.get())
+        grid_height = int(self.grid_height_entry.get())
+        scale = int(self.scale_entry.get())
+        self.main_window.change_agent_speed(speed)
+        self.main_window.change_environment_grid(grid_width,
+                                                 grid_height,
+                                                 scale)
+        self.top.destroy()
+        
+class CloseWindow(Frame):
+    def __init__(self, master):
+        self.master = master
+        top = self.top = Toplevel(master)
+        top.geometry("230x100")
+        
+        msg = Label(top, text="Are you sure you want to quit?", padx=20, pady=20)
+        msg.grid(row=0, columnspan=2)
+        
+        yes_button = Button(top, text="Yes", command=self.close_app)
+        yes_button.bind("<Return>", self.close_app)
+        yes_button.grid(row=1, column=0, sticky="e")
+        
+        cancel_button = Button(top, text="Cancel", command=self.cancel)
+        cancel_button.bind("<Return>", self.cancel)
+        cancel_button.grid(row=1, column=1, sticky="w")
+        
+    def close_app(self, *args):
+        self.top.destroy()
+        quit()
+        
+    def cancel(self, *args):
+        self.top.destroy()
+        
+        
+def close(*args):
+    sure_popup = CloseWindow(root)
+    root.wait_window(sure_popup.top)
+    
 root = Tk()
 root.title("A Demon In Conway's Game Of Life")
+root.bind("<Escape>", close)
+
+
         
 size = (20, 20)     # Default: (50, 50)
 scale = 10          # Default: 10 
