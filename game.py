@@ -19,7 +19,7 @@ from random import randint
 import time
 import numpy as np
 
-from tkinter import Tk, Frame, Button, Menu, Label, Canvas, \
+from tkinter import Tk, Frame, Button, Checkbutton, Menu, Label, Canvas, \
                     BOTH, BOTTOM, RIGHT, LEFT, Toplevel, Entry, filedialog
                     
 from PIL import Image, ImageTk
@@ -107,6 +107,7 @@ class MainWindow(Frame):
                            self.eye_location, 
                            gamma=0.9)
         self.agent.vision.update(self.data)
+        self.agent_enabled = False
         
         self.last_reward = 0
         self.agent_speed = 10 # How many times the demon updates every game step
@@ -114,7 +115,7 @@ class MainWindow(Frame):
         
         # Calculate size of app window
         win_X = self.size[1] * self.scale + 193
-        win_Y = self.size[0] * self.scale + 50
+        win_Y = self.size[0] * self.scale + 67
         self.master.geometry("{width}x{height}".format(width=win_X, height=win_Y))
         #self.master.minsize(win_X, win_Y)
         self.master.minsize(max(win_X, 690), max(win_Y, 551))
@@ -171,20 +172,40 @@ class MainWindow(Frame):
         self.message_box.grid(row=7, columnspan=2, pady= 10)
 
         # Bottom Frame: for game control buttons
-        button_menu = Frame(self.master, bg="#444444", 
+        button_menu = Frame(self.master, bg="#DDDDDD", 
                             relief="ridge", borderwidth=5)
         button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)  
         
         quit_button = Button(button_menu, text="Quit", command=close)
         seed_button = Button(button_menu, text="Seed", command=self.seed)
-        random_button = Button(button_menu, text="Random", command=self.randomize)
+        random_button = Button(button_menu, text="Random", 
+                               command=self.randomize)
         clear_button = Button(button_menu, text="Clear", command=self.clear)
-        start_button = Button(button_menu, text="Start", command=self.start_game)
+        start_button = Button(button_menu, text="Start", 
+                              command=self.start_game)
         step_button = Button(button_menu, text="Step", command=self.step)
         stop_button = Button(button_menu, text="Stop", command=self.stop_game)
-        speed_up_button = Button(button_menu, text="Speed Up", command=self.speed_up)
-        slow_down_button = Button(button_menu, text="Slow Down", command=self.slow_down)
-        
+        speed_up_button = Button(button_menu, text="Speed Up", 
+                                 command=self.speed_up)
+        slow_down_button = Button(button_menu, text="Slow Down", 
+                                  command=self.slow_down)
+        toggle_agent_button = Checkbutton(button_menu, text="Enable Demon",
+                                          #activebackground="Green",
+                                          #disabledforeground="Red",
+                                          bg="#DDDDDD",
+                                          command=self.toggle_agent)
+
+        quit_button.grid(row=0, column=1, padx=10, pady=2)
+        seed_button.grid(row=0, column=2, padx=1)
+        random_button.grid(row=0, column=3, padx=1)
+        clear_button.grid(row=0, column=4, padx=1)
+        start_button.grid(row=0, column=5, padx=1)
+        step_button.grid(row=0, column=6, padx=1)
+        stop_button.grid(row=0, column=7, padx=1)
+        speed_up_button.grid(row=0, column=8, padx=1)
+        slow_down_button.grid(row=0, column=9, padx=1)
+        toggle_agent_button.grid(row=1, columnspan=4)
+        """
         quit_button.pack(side=LEFT, padx=10, pady=5)
         seed_button.pack(side=LEFT, padx=2)
         random_button.pack(side=LEFT, padx=2)
@@ -194,6 +215,8 @@ class MainWindow(Frame):
         stop_button.pack(side=LEFT, padx=2)
         speed_up_button.pack(side=LEFT, padx=2)
         slow_down_button.pack(side=LEFT, padx=2)
+        toggle_agent_button.pack(side=BOTTOM, padx=2, pady=3)
+        """
         
         # Environment Frame: the main cell grid
         self.environment = Frame(self.master, 
@@ -276,17 +299,16 @@ class MainWindow(Frame):
         self.agent_speed = newspeed
         
     def change_environment_grid(self, newwidth, newheight, newscale):
-        #print("1")
         oldsize = self.size
         self.size = (newwidth, newheight)
-        #print(self.size)
         self.scale = newscale
-        #print(self.scale)
         old_data = self.data
         self.data = np.ones(self.size, dtype="uint8")
+        # Preserve existing environment data after resizing
         for i in range(min(len(old_data), len(self.data))):
             for j in range(min(len(old_data[i]), len(self.data[i]))):
                 self.data[i][j] = old_data[i][j]
+        # Re-center the agent if making the grid smaller
         if newwidth < oldsize[0] or newheight < oldsize[1]:
             self.agent.vision.eye_location = np.array((self.size[0]//2, 
                                                        self.size[1]//2))
@@ -313,6 +335,29 @@ class MainWindow(Frame):
 
     def display_agent_view(self):
         # Display a close-up of the demon's view in the display console
+        if self.agent_enabled:
+            view = self.agent.vision.get_view()
+            img_data = np.ones(view.shape, dtype="float")
+            for i in range(len(view)):
+                for j in range(len(view[i])):
+                    if view[i][j] is not None:
+                        if view[i][j] == 1 and self.vis_field[i][j] != 2:
+                            img_data[i][j] = 0.8
+                        elif view[i][j] == 0:
+                            img_data[i][j] = 0
+            colorweighted_data = img_data * 255
+            self.scale_render_place(colorweighted_data, 
+                                    self.view_scale,
+                                    self.agentview_display)
+        else:
+            view = self.agent.vision.get_view()
+            img_data = np.ones(view.shape, dtype="float")
+            colorweighted_data = img_data * 255
+            self.scale_render_place(colorweighted_data, 
+                                    self.view_scale,
+                                    self.agentview_display)
+        """
+        # Display a close-up of the demon's view in the display console
         view = self.agent.vision.get_view()
         img_data = np.ones(view.shape, dtype="float")
         for i in range(len(view)):
@@ -326,7 +371,8 @@ class MainWindow(Frame):
         self.scale_render_place(colorweighted_data, 
                                 self.view_scale,
                                 self.agentview_display)
-
+        """
+        
     def display_data(self):
         # Display the environment in the main window
         colorweighted_data = self.data * 255
@@ -336,19 +382,20 @@ class MainWindow(Frame):
         for i in range(len(vf)):
             for j in range(len(vf[i])):
                 if vf[i][j] == 2:
-                    loc_eye_x, loc_eye_y = i, j
-        # Make visual field appear gray so it can be seen in environment
-        for i in range(len(vf)):
-            for j in range(len(vf[i])):
-                x = i + eye_x - loc_eye_x
-                y = j + eye_y - loc_eye_y
-                # Keep the eye white
-                if x == eye_x and y == eye_y:
-                    continue
-                # If within visual field and within bounds of the env. :
-                if 0 <= x < self.size[0] and 0 <= y < self.size[1]:
-                    if colorweighted_data[x][y] == 255 and vf[i][j] > 0:
-                        colorweighted_data[x][y] = 200
+                    loc_eye_x, loc_eye_y = i, j         
+        # Make agent visual field appear gray so it can be seen in environment
+        if self.agent_enabled:
+            for i in range(len(vf)):
+                for j in range(len(vf[i])):
+                    x = i + eye_x - loc_eye_x
+                    y = j + eye_y - loc_eye_y
+                    # Keep the eye white
+                    if x == eye_x and y == eye_y:
+                        continue
+                    # If within visual field and within bounds of the env. :
+                    if 0 <= x < self.size[0] and 0 <= y < self.size[1]:
+                        if colorweighted_data[x][y] == 255 and vf[i][j] > 0:
+                            colorweighted_data[x][y] = 200
         self.scale_render_place(colorweighted_data, self.scale, self.env_img)
 
     def display_reward_scheme(self):
@@ -368,8 +415,6 @@ class MainWindow(Frame):
                         colorweighted_data[i][j] = 255
                     else:
                         colorweighted_data[i][j] = 0
-        self.scale_render_place(colorweighted_data, self.view_scale,
-                                self.reward_scheme_view)
   
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
@@ -380,6 +425,7 @@ class MainWindow(Frame):
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
             
     def get_reward(self):
+        """
         r = self.reward_scheme.calc_reward(self.agent.vision.get_view())
         if r == 10:
             self.match_count += 1 
@@ -402,7 +448,7 @@ class MainWindow(Frame):
                 r += 1
         reward = r   
         return reward
-        """
+        
         
     def gun(self):
         # Initialize a "Gosper's glider gun"
@@ -514,6 +560,36 @@ class MainWindow(Frame):
                 result = self.conway_rule(x, y)
                 newdata[x][y] = result
         self.data = newdata
+        self.display_data()
+        if self.agent_enabled:
+            self.agent.vision.update(newdata)
+            self.display_agent_view()
+            # Update the demon X number of times --- set by self.agent_speed
+            for i in range(self.agent_speed):
+                self.update_agent()
+                self.update()
+                self.display_data()
+                self.display_agent_view()
+                self.update_meters()
+                time.sleep(self.interval / self.agent_speed)
+                if self.wait == True:
+                    break
+            self.wait = False
+        
+        self.update()
+        time.sleep(self.interval)
+        self.generation += 1
+        self.generation_count.config(text=str(self.generation))
+            
+    """
+    def step(self):
+        # Apply the Conway game rules to all the cells
+        newdata = np.ones(self.size, dtype="uint8")
+        for x in range(1, self.size[0]-1):
+            for y in range(1, self.size[1]-1):
+                result = self.conway_rule(x, y)
+                newdata[x][y] = result
+        self.data = newdata
         self.agent.vision.update(newdata)
         self.display_data()
         self.display_agent_view()
@@ -534,9 +610,15 @@ class MainWindow(Frame):
         time.sleep(self.interval)
         self.generation += 1
         self.generation_count.config(text=str(self.generation))
-  
+    """
+    
     def stop_game(self):
         self.running = False
+        
+    def toggle_agent(self):
+        self.agent_enabled = not self.agent_enabled
+        self.display_data()
+        self.display_agent_view()
 
     def update_agent(self):
         self.agent.vision.update(self.data)
@@ -550,7 +632,7 @@ class MainWindow(Frame):
         self.last_reward = reward
         
     def update_meters(self):        
-        reward_meter_scale = 10
+        reward_meter_scale = 5
         x0, y0, x1, y1 = self.reward_meter.coords(self.reward_meter_level)
         x1 = reward_meter_scale * self.last_reward
         if x1 < 2:
@@ -590,72 +672,35 @@ class SaveWindow(Frame):
         
 class SettingsWindow(Frame):
     def __init__(self, master, main_window):
-        """
-        self.main_window = main_window
-        top = self.top = Toplevel(master)
-        top.title("Settings")
-        self.top.geometry("300x180")
-        
-        speed_label = Label(top, text="Agent Speed (actions per game step):")
-        speed_label.grid(row=0, column=0, sticky="e")
-        self.speed_entry = Entry(top, width=3)
-        self.speed_entry.grid(row=0, column=1, sticky="w")
-        self.speed_entry.insert(0, str(self.main_window.agent_speed))
-        
-        grid_width_label = Label(top, text="Environment width:")
-        grid_width_label.grid(row=1, column=0, sticky="e")
-        self.grid_width_entry = Entry(top, width=3)
-        self.grid_width_entry.grid(row=1, column=1, sticky="w")
-        self.grid_width_entry.insert(0, str(self.main_window.size[0]))
-        
-        grid_height_label = Label(top, text="Environment height:")
-        grid_height_label.grid(row=2, column=0, sticky="e")
-        self.grid_height_entry = Entry(top, width=3)
-        self.grid_height_entry.grid(row=2, column=1, sticky="w")
-        self.grid_height_entry.insert(0, str(self.main_window.size[1]))
-        
-        scale_label = Label(top, text="Scale:")
-        scale_label.grid(row=3, column=0, sticky="e")
-        self.scale_entry = Entry(top, width=3)
-        self.scale_entry.grid(row=3, column=1, sticky="w")
-        self.scale_entry.insert(0, str(self.main_window.scale))
-        
-        ok_button = Button(top, text="OK", command=self.execute)#, 
-                           #width=4, height=2)
-        ok_button.bind("<Enter>", self.execute)
-        ok_button.grid(row=4, column=0)
-        """
-        
         self.main_window = main_window
         top = self.top = Toplevel(master)
         self.top.title("Settings")
-        #self.top.geometry("300x180")
         
-        s = Frame(top, borderwidth=10, bg="gray")
-        #s.bind("<Return>", self.execute)
+        s = Frame(top, borderwidth=10, bg="#CCCCCC")
         s.pack()
-        speed_label = Label(s, text="Agent Speed (actions per game step):")
+        speed_label = Label(s, text="Agent Speed (actions per game step):",
+                            bg="#CCCCCC")
         speed_label.grid(row=0, column=0, sticky="e")
         self.speed_entry = Entry(s, width=3)
         self.speed_entry.bind("<Return>", self.execute)
         self.speed_entry.grid(row=0, column=1, sticky="w")
         self.speed_entry.insert(0, str(self.main_window.agent_speed))
         
-        grid_width_label = Label(s, text="Environment width:")
+        grid_width_label = Label(s, text="Environment width:", bg="#CCCCCC")
         grid_width_label.grid(row=1, column=0, sticky="e")
         self.grid_width_entry = Entry(s, width=3)
         self.grid_width_entry.bind("<Return>", self.execute)
         self.grid_width_entry.grid(row=1, column=1, sticky="w")
         self.grid_width_entry.insert(0, str(self.main_window.size[0]))
         
-        grid_height_label = Label(s, text="Environment height:")
+        grid_height_label = Label(s, text="Environment height:", bg="#CCCCCC")
         grid_height_label.grid(row=2, column=0, sticky="e")
         self.grid_height_entry = Entry(s, width=3)
         self.grid_height_entry.bind("<Return>", self.execute)
         self.grid_height_entry.grid(row=2, column=1, sticky="w")
         self.grid_height_entry.insert(0, str(self.main_window.size[1]))
         
-        scale_label = Label(s, text="Scale:")
+        scale_label = Label(s, text="Scale:", bg="#CCCCCC")
         scale_label.grid(row=3, column=0, sticky="e")
         self.scale_entry = Entry(s, width=3)
         self.scale_entry.bind("<Return>", self.execute)
@@ -667,7 +712,7 @@ class SettingsWindow(Frame):
         ok_button.grid(row=4, column=0)
         
         
-    def execute(self, event):
+    def execute(self, *args):
         speed = int(self.speed_entry.get())
         grid_width = int(self.grid_width_entry.get())
         grid_height = int(self.grid_height_entry.get())
@@ -713,7 +758,7 @@ root.bind("<Escape>", close)
 
 
         
-size = (20, 20)     # Default: (50, 50)
+size = (50, 50)     # Default: (50, 50)
 scale = 10          # Default: 10 
 
 main_window = MainWindow(root, size, scale)
