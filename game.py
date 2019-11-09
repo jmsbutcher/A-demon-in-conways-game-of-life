@@ -116,7 +116,7 @@ class MainWindow(Frame):
         
         # Calculate size of app window
         win_X = self.size[1] * self.scale + 193
-        win_Y = self.size[0] * self.scale + 67
+        win_Y = self.size[0] * self.scale + 101
         self.master.geometry("{width}x{height}".format(width=win_X, height=win_Y))
         #self.master.minsize(win_X, win_Y)
         self.master.minsize(max(win_X, 690), max(win_Y, 551))
@@ -193,9 +193,10 @@ class MainWindow(Frame):
         toggle_agent_button = Checkbutton(button_menu, text="Enable Demon",
                                           bg="#DDDDDD",
                                           command=self.toggle_agent)
-        manual_mode_button = Checkbutton(button_menu, text="Manual Mode",
+        self.manual_mode_button = Checkbutton(button_menu, text="Manual Mode",
                                           bg="#DDDDDD",
                                           bd=3,
+                                          variable=1,
                                           command=self.toggle_manual_mode)
 
         quit_button.grid(row=0, column=1, padx=10, pady=2)
@@ -209,7 +210,7 @@ class MainWindow(Frame):
         slow_down_button.grid(row=0, column=9, padx=1)
         toggle_agent_button.grid(row=1, columnspan=4, sticky="w", 
                                  padx=3, pady=3)
-        manual_mode_button.grid(row=2, columnspan=4, sticky="w", 
+        self.manual_mode_button.grid(row=2, columnspan=4, sticky="w", 
                                 padx=3, pady=3)
         
         # Environment Frame: the main cell grid
@@ -237,7 +238,7 @@ class MainWindow(Frame):
         new = Menu(menu)
         new.add_command(label="Random", command = self.randomize)
         new.add_command(label="Seed", command = self.seed)
-        new.add_command(label="Gun", command = self.gun)
+        new.add_command(label="Glider Gun", command = self.gun)
         
         run = Menu(menu)
         run.add_command(label="Start", command = self.start_game)
@@ -252,15 +253,22 @@ class MainWindow(Frame):
         menu.add_cascade(label="Run", menu=run)
         
         # Key Bindings
-        # Manual mode controls:
+        #   Manual mode controls:
         master.bind("<space>", self.manual_action)
         master.bind("<Up>", self.manual_action)
         master.bind("<Down>", self.manual_action)
         master.bind("<Left>", self.manual_action)
         master.bind("<Right>", self.manual_action)
         master.bind("<c>", self.manual_action)
-        # General controls:
+        
+        #   General controls:
         master.bind("<Escape>", self.quit_game)
+        master.bind("<q>", self.quit_game)
+        master.bind("<s>", self.change_settings)
+        master.bind("<p>", self.speed_up)
+        master.bind("<o>", self.slow_down)
+        master.bind("<m>", self.toggle_manual_mode)
+        master.bind("<e>", self.toggle_agent)
     
     def act(self, a):
         # Make demon take an action based on int parameter <a>:
@@ -292,7 +300,7 @@ class MainWindow(Frame):
         self.display_data()
         self.display_agent_view()
         
-    def change_settings(self):
+    def change_settings(self, *args):
         settings_popup = SettingsWindow(self.master, self)
         self.master.wait_window(settings_popup.top)
         
@@ -485,6 +493,12 @@ class MainWindow(Frame):
                 action = 5
             self.act(action)
             self.update_agent()
+        elif not self.manual_mode:
+            if str(event.char) == " ":
+                if self.running:
+                    self.stop_game()
+                else:
+                    self.start_game()
         
     def move_chance(self, chance=10):
         # When called, demon has a 1 in <chance> chance of moving in one
@@ -502,11 +516,15 @@ class MainWindow(Frame):
             self.agent.vision.move(0, -1)
             
     def quit_game(self, *args):
-        self.stop_game()
+        paused = False
+        if self.running:
+            self.stop_game()
+            paused = True
         quit_popup = QuitWindow(root)
         root.wait_window(quit_popup.top)
-        if quit_popup.cancelled:
+        if quit_popup.cancelled and paused:
             self.start_game()
+
         
     def randomize(self):
         # Initialize a random state on the whole grid
@@ -554,10 +572,10 @@ class MainWindow(Frame):
         self.display_data()
         self.display_agent_view()
         
-    def slow_down(self):
+    def slow_down(self, *args):
         self.interval += .1
         
-    def speed_up(self):
+    def speed_up(self, *args):
         if self.interval > 0.1:
             self.interval -= 0.1
         else:
@@ -602,16 +620,22 @@ class MainWindow(Frame):
     def stop_game(self):
         self.running = False
         
-    def toggle_agent(self):
+    def toggle_agent(self, *args):
         # Turn the agent on or off so you can see how the game evolves
         # with or without the agent
         self.agent_enabled = not self.agent_enabled
         self.display_data()
         self.display_agent_view()
         
-    def toggle_manual_mode(self):
+    def toggle_manual_mode(self, *args):
         # Enable or disable manual control over the agent
+        for event in args:
+            if event.char == "m":
+                # Toggle the check graphic if activated by pressing 
+                #   the "m" key instead of clicking on the button
+                self.manual_mode_button.toggle()
         if not self.manual_mode:
+                # Pause the game when entering manual mode
             self.stop_game()
         self.manual_mode = not self.manual_mode
 
