@@ -108,6 +108,7 @@ class MainWindow(Frame):
                            gamma=0.9)
         self.agent.vision.update(self.data)
         self.agent_enabled = False
+        self.manual_mode = False
         
         self.last_reward = 0
         self.agent_speed = 10 # How many times the demon updates every game step
@@ -176,7 +177,7 @@ class MainWindow(Frame):
                             relief="ridge", borderwidth=5)
         button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)  
         
-        quit_button = Button(button_menu, text="Quit", command=close)
+        quit_button = Button(button_menu, text="Quit", command=self.quit_game)
         seed_button = Button(button_menu, text="Seed", command=self.seed)
         random_button = Button(button_menu, text="Random", 
                                command=self.randomize)
@@ -190,10 +191,12 @@ class MainWindow(Frame):
         slow_down_button = Button(button_menu, text="Slow Down", 
                                   command=self.slow_down)
         toggle_agent_button = Checkbutton(button_menu, text="Enable Demon",
-                                          #activebackground="Green",
-                                          #disabledforeground="Red",
                                           bg="#DDDDDD",
                                           command=self.toggle_agent)
+        manual_mode_button = Checkbutton(button_menu, text="Manual Mode",
+                                          bg="#DDDDDD",
+                                          bd=3,
+                                          command=self.toggle_manual_mode)
 
         quit_button.grid(row=0, column=1, padx=10, pady=2)
         seed_button.grid(row=0, column=2, padx=1)
@@ -204,19 +207,10 @@ class MainWindow(Frame):
         stop_button.grid(row=0, column=7, padx=1)
         speed_up_button.grid(row=0, column=8, padx=1)
         slow_down_button.grid(row=0, column=9, padx=1)
-        toggle_agent_button.grid(row=1, columnspan=4)
-        """
-        quit_button.pack(side=LEFT, padx=10, pady=5)
-        seed_button.pack(side=LEFT, padx=2)
-        random_button.pack(side=LEFT, padx=2)
-        clear_button.pack(side=LEFT, padx=2)
-        start_button.pack(side=LEFT, padx=2)
-        step_button.pack(side=LEFT, padx=2)
-        stop_button.pack(side=LEFT, padx=2)
-        speed_up_button.pack(side=LEFT, padx=2)
-        slow_down_button.pack(side=LEFT, padx=2)
-        toggle_agent_button.pack(side=BOTTOM, padx=2, pady=3)
-        """
+        toggle_agent_button.grid(row=1, columnspan=4, sticky="w", 
+                                 padx=3, pady=3)
+        manual_mode_button.grid(row=2, columnspan=4, sticky="w", 
+                                padx=3, pady=3)
         
         # Environment Frame: the main cell grid
         self.environment = Frame(self.master, 
@@ -235,7 +229,7 @@ class MainWindow(Frame):
         self.master.config(menu=menu)
         
         file = Menu(menu)
-        file.add_command(label="Exit", command=close)
+        file.add_command(label="Exit", command=self.quit_game)
         file.add_command(label="Save", command=self.save)
         file.add_command(label="Load", command=self.load)
         file.add_command(label="Settings", command=self.change_settings)
@@ -258,8 +252,15 @@ class MainWindow(Frame):
         menu.add_cascade(label="Run", menu=run)
         
         # Key Bindings
-        #self.bind("<Up>", lambda: self.act(1))
-        #master.bind("<Button-1>", self.clear)
+        # Manual mode controls:
+        master.bind("<space>", self.manual_action)
+        master.bind("<Up>", self.manual_action)
+        master.bind("<Down>", self.manual_action)
+        master.bind("<Left>", self.manual_action)
+        master.bind("<Right>", self.manual_action)
+        master.bind("<c>", self.manual_action)
+        # General controls:
+        master.bind("<Escape>", self.quit_game)
     
     def act(self, a):
         # Make demon take an action based on int parameter <a>:
@@ -271,17 +272,17 @@ class MainWindow(Frame):
         # 5 --> Flip cell
         loc = self.agent.vision.eye_location # Demon's (x, y) location
         if a == 0:
-            self.wait = True                # ; print("Wait", end=" ")
+            self.wait = True                 #; print("Wait", end=" ")
         elif a == 1 and loc[0] < self.size[0]-1:
-            self.agent.vision.move(1, 0)    # ; print("Up", end=" ")
+            self.agent.vision.move(1, 0)     #; print("Up", end=" ")
         elif a == 2 and loc[0] > 0:
-            self.agent.vision.move(-1, 0)   # ; print("Down", end=" ")
+            self.agent.vision.move(-1, 0)    #; print("Down", end=" ")
         elif a == 3 and loc[1] < self.size[1]-1:
-            self.agent.vision.move(0, 1)    # ; print("Left", end=" ")
+            self.agent.vision.move(0, 1)     #; print("Left", end=" ")
         elif a == 4 and loc[1] > 0:
-            self.agent.vision.move(0, -1)   # ; print("Right", end=" ")
+            self.agent.vision.move(0, -1)    #; print("Right", end=" ")
         elif a == 5:
-            self.flip_cell()                # ; print("Flipped", end=" ")
+            self.flip_cell()                 #; print("Flipped", end=" ")
             
     def clear(self):
         self.generation = 0
@@ -299,10 +300,12 @@ class MainWindow(Frame):
         self.agent_speed = newspeed
         
     def change_environment_grid(self, newwidth, newheight, newscale):
+        # Change the number of cells wide, number of cells high, 
+        # and pixel size of each cell
         oldsize = self.size
+        old_data = self.data
         self.size = (newwidth, newheight)
         self.scale = newscale
-        old_data = self.data
         self.data = np.ones(self.size, dtype="uint8")
         # Preserve existing environment data after resizing
         for i in range(min(len(old_data), len(self.data))):
@@ -356,22 +359,6 @@ class MainWindow(Frame):
             self.scale_render_place(colorweighted_data, 
                                     self.view_scale,
                                     self.agentview_display)
-        """
-        # Display a close-up of the demon's view in the display console
-        view = self.agent.vision.get_view()
-        img_data = np.ones(view.shape, dtype="float")
-        for i in range(len(view)):
-            for j in range(len(view[i])):
-                if view[i][j] is not None:
-                    if view[i][j] == 1 and self.vis_field[i][j] != 2:
-                        img_data[i][j] = 0.8
-                    elif view[i][j] == 0:
-                        img_data[i][j] = 0
-        colorweighted_data = img_data * 255
-        self.scale_render_place(colorweighted_data, 
-                                self.view_scale,
-                                self.agentview_display)
-        """
         
     def display_data(self):
         # Display the environment in the main window
@@ -476,7 +463,29 @@ class MainWindow(Frame):
             title="Select file",
             filetypes=[("Path file", "*.pth")])
         self.agent.load(brain_filename)
-            
+        
+    def manual_action(self, event):
+        if self.agent_enabled and self.manual_mode:
+            #print("Manual action taken:", repr(event.char))
+            # Spacebar causes game to advance one step
+            if str(event.char) == " ":
+                self.step()
+                action = 0
+            # Move actions - up/down and left/right have been reversed
+            elif str(event.char) == "\uf700":   # Up key pressed
+                action = 2
+            elif str(event.char) == "\uf701":   # Down key pressed
+                action = 1
+            elif str(event.char) == "\uf702":   # Left key pressed
+                action = 4
+            elif str(event.char) == "\uf703":   # Right key pressed
+                action = 3
+            # "c" key flips cell
+            else:
+                action = 5
+            self.act(action)
+            self.update_agent()
+        
     def move_chance(self, chance=10):
         # When called, demon has a 1 in <chance> chance of moving in one
         # of four directions.
@@ -491,6 +500,13 @@ class MainWindow(Frame):
             self.agent.vision.move(0, 1)
         elif chance == 4 and loc[1] > 0:
             self.agent.vision.move(0, -1)
+            
+    def quit_game(self, *args):
+        self.stop_game()
+        quit_popup = QuitWindow(root)
+        root.wait_window(quit_popup.top)
+        if quit_popup.cancelled:
+            self.start_game()
         
     def randomize(self):
         # Initialize a random state on the whole grid
@@ -561,64 +577,43 @@ class MainWindow(Frame):
                 newdata[x][y] = result
         self.data = newdata
         self.display_data()
-        if self.agent_enabled:
+        self.agent.vision.update(newdata)
+        self.display_agent_view()
+        if self.agent_enabled and not self.manual_mode:
             self.agent.vision.update(newdata)
             self.display_agent_view()
             # Update the demon X number of times --- set by self.agent_speed
             for i in range(self.agent_speed):
                 self.update_agent()
-                self.update()
-                self.display_data()
-                self.display_agent_view()
-                self.update_meters()
                 time.sleep(self.interval / self.agent_speed)
                 if self.wait == True:
                     break
             self.wait = False
-        
         self.update()
-        time.sleep(self.interval)
         self.generation += 1
         self.generation_count.config(text=str(self.generation))
-            
-    """
-    def step(self):
-        # Apply the Conway game rules to all the cells
-        newdata = np.ones(self.size, dtype="uint8")
-        for x in range(1, self.size[0]-1):
-            for y in range(1, self.size[1]-1):
-                result = self.conway_rule(x, y)
-                newdata[x][y] = result
-        self.data = newdata
-        self.agent.vision.update(newdata)
-        self.display_data()
-        self.display_agent_view()
-        
-        # Update the demon X number of times --- set by self.agent_speed
-        for i in range(self.agent_speed):
-            self.update_agent()
-            self.update()
-            self.display_data()
-            self.display_agent_view()
-            self.update_meters()
-            time.sleep(self.interval / self.agent_speed)
-            if self.wait == True:
-                break
-        self.wait = False
-        
-        self.update()
-        time.sleep(self.interval)
-        self.generation += 1
-        self.generation_count.config(text=str(self.generation))
-    """
+        # Force program to wait for an interval of time. This controls the
+        # game speed after pressing Start
+        if self.running:# and not self.manual_mode:
+            t = time.time() + self.interval
+            while time.time() < t:
+                pass
     
     def stop_game(self):
         self.running = False
         
     def toggle_agent(self):
+        # Turn the agent on or off so you can see how the game evolves
+        # with or without the agent
         self.agent_enabled = not self.agent_enabled
         self.display_data()
         self.display_agent_view()
+        
+    def toggle_manual_mode(self):
+        # Enable or disable manual control over the agent
+        if not self.manual_mode:
+            self.stop_game()
+        self.manual_mode = not self.manual_mode
 
     def update_agent(self):
         self.agent.vision.update(self.data)
@@ -627,9 +622,14 @@ class MainWindow(Frame):
         viewdata = [1 if x is None else x for x in viewdata]
         reward = self.get_reward()
         action = self.agent.update(reward, viewdata)
-        self.act(action)        
-        self.agent.vision.update(self.data)
+        if not self.manual_mode:
+            self.act(action)        
+            self.agent.vision.update(self.data)
         self.last_reward = reward
+        self.update()
+        self.display_data()
+        self.display_agent_view()
+        self.update_meters()
         
     def update_meters(self):        
         reward_meter_scale = 5
@@ -711,52 +711,46 @@ class SettingsWindow(Frame):
         ok_button.bind("<Return>", self.execute)
         ok_button.grid(row=4, column=0)
         
-        
     def execute(self, *args):
         speed = int(self.speed_entry.get())
         grid_width = int(self.grid_width_entry.get())
         grid_height = int(self.grid_height_entry.get())
         scale = int(self.scale_entry.get())
         self.main_window.change_agent_speed(speed)
-        self.main_window.change_environment_grid(grid_width,
-                                                 grid_height,
-                                                 scale)
+        self.main_window.change_environment_grid(grid_width, grid_height, scale)
         self.top.destroy()
         
-class CloseWindow(Frame):
+        
+class QuitWindow(Frame):
     def __init__(self, master):
         self.master = master
+        self.cancelled = False
         top = self.top = Toplevel(master)
         top.geometry("230x100")
         
-        msg = Label(top, text="Are you sure you want to quit?", padx=20, pady=20)
+        msg = Label(top, text="Are you sure you want to quit?", 
+                    padx=20, pady=20)
         msg.grid(row=0, columnspan=2)
         
-        yes_button = Button(top, text="Yes", command=self.close_app)
-        yes_button.bind("<Return>", self.close_app)
+        yes_button = Button(top, text="Yes", command=self.quit_app)
+        yes_button.bind("<Return>", self.quit_app)
         yes_button.grid(row=1, column=0, sticky="e")
         
         cancel_button = Button(top, text="Cancel", command=self.cancel)
         cancel_button.bind("<Return>", self.cancel)
         cancel_button.grid(row=1, column=1, sticky="w")
         
-    def close_app(self, *args):
+    def quit_app(self, *args):
         self.top.destroy()
         quit()
         
     def cancel(self, *args):
+        self.cancelled = True
         self.top.destroy()
         
-        
-def close(*args):
-    sure_popup = CloseWindow(root)
-    root.wait_window(sure_popup.top)
     
 root = Tk()
 root.title("A Demon In Conway's Game Of Life")
-root.bind("<Escape>", close)
-
-
         
 size = (50, 50)     # Default: (50, 50)
 scale = 10          # Default: 10 
