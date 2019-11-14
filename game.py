@@ -42,7 +42,7 @@ flipper = np.array([[1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1]])
 
 
-# Visual field shapes
+# Default visual field shapes
 #   0 - Not part of the visual field
 #   1 - Part of the visual field
 #   2 - The agent's eye location
@@ -237,7 +237,8 @@ class MainWindow(Frame):
         file = Menu(menu)
         file.add_command(label="Exit", command=self.quit_game)
         file.add_command(label="Save", command=self.save)
-        file.add_command(label="Load", command=self.load)
+        file.add_command(label="Load Brain", command=self.load)
+        file.add_command(label="Load Visual Field", command=self.load_visual_field)
         file.add_command(label="Settings", command=self.change_settings)
         
         new = Menu(menu)
@@ -478,6 +479,74 @@ class MainWindow(Frame):
             title="Select file",
             filetypes=[("Path file", "*.pth")])
         self.agent.load(brain_filename)
+        
+    def load_visual_field(self):
+        new_vf = [[]]
+        print("Select visual field file")
+        vf_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Saved_brains", 
+            title="Select visual field file")
+        vf_file = open(vf_filename, "r")
+        eye_location_given = False
+        row = 0
+        while True:
+            cell = vf_file.read(1)
+            if cell == "0":
+                new_vf[row].append(0)
+            elif cell == "1":
+                new_vf[row].append(1)
+            elif cell == "2":
+                if not eye_location_given:
+                    new_vf[row].append(2)
+                    eye_location_given = True
+                else:
+                    print("ERROR: Bad visual field file.\n"
+                          "File contains more than one '2'.\n"
+                          "Must provide only a single '2' to indicate\n"
+                          "agent eye location.")
+                    vf_file.close()
+                    return
+            elif cell == "\n":
+                new_vf.append([])
+                row += 1
+            elif cell == "":
+                break
+            else:
+                print("ERROR: Bad visual field file.\n"
+                      "File must only contain:\n"
+                      " - A single '2'\n"
+                      " - Any number of '0's and '1's\n"
+                      " Detected '{}'.".format(cell))
+                vf_file.close()
+                return
+    
+        if not eye_location_given:
+            print("ERROR: Bad visual field file.\n"
+                  "Must provide a '2' to indicate agent eye location.")
+            vf_file.close()
+            return
+        
+        new_vf = np.array(new_vf)
+        
+        if len(new_vf.shape) != 2:
+            print("ERROR: Bad visual field file.\n"
+                  "File must provide a RECTANGULAR grid of:\n"
+                  " - A single '2'\n"
+                  " - Any number of '0's and '1's")
+            vf_file.close()
+            return
+
+        vf_file.close()
+        self.vis_field = new_vf
+        self.agent = Agent(self.data, 
+                           self.vis_field, 
+                           self.eye_location, 
+                           gamma=0.9)
+        self.agent.vision.update(self.data)
+        self.display_data()
+        self.display_agent_view()
+        print("Loaded new visual field.")
+        return new_vf
+                
         
     def manual_action(self, event):
         if self.agent_enabled and self.manual_mode:
