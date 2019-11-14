@@ -67,13 +67,13 @@ class Agent():
         if name == "":
             torch.save({"state_dict": self.brain.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
-                    }, "Saved_brains/last_brain.pth")
+                    }, "last_brain.pth")
             print("Brain saved as last_brain.pth.")
             return
         else:
             torch.save({"state_dict": self.brain.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
-                    }, "Saved_brains/{}.pth".format(name))
+                    }, name)       # "Saved_brains/{}.pth".format(name))
             print("Brain saved as {}".format(str(name)))
             return
     

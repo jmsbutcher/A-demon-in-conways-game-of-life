@@ -177,6 +177,9 @@ class MainWindow(Frame):
                             relief="ridge", borderwidth=5)
         button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)  
         
+        #---------------------------------------------------------------------
+        # Buttons
+        #---------------------------------------------------------------------
         quit_button = Button(button_menu, text="Quit", command=self.quit_game)
         seed_button = Button(button_menu, text="Seed", command=self.seed)
         random_button = Button(button_menu, text="Random", 
@@ -225,7 +228,9 @@ class MainWindow(Frame):
         self.env_img.place(x=0, y=0)
         self.display_data()
         
+        #---------------------------------------------------------------------
         # Menus
+        #---------------------------------------------------------------------
         menu = Menu(self.master)
         self.master.config(menu=menu)
         
@@ -252,7 +257,9 @@ class MainWindow(Frame):
         menu.add_cascade(label="New", menu=new)
         menu.add_cascade(label="Run", menu=run)
         
+        #---------------------------------------------------------------------
         # Key Bindings
+        #---------------------------------------------------------------------
         #   Manual mode controls:
         master.bind("<space>", self.manual_action)
         master.bind("<Up>", self.manual_action)
@@ -309,7 +316,7 @@ class MainWindow(Frame):
         
     def change_environment_grid(self, newwidth, newheight, newscale):
         # Change the number of cells wide, number of cells high, 
-        # and pixel size of each cell
+        #   and pixel size of each cell
         oldsize = self.size
         old_data = self.data
         self.size = (newwidth, newheight)
@@ -413,7 +420,7 @@ class MainWindow(Frame):
   
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
-        # cell at its current location from 1 to 0 or vice versa.
+        #   cell at its current location from 1 to 0 or vice versa.
         loc = tuple(self.agent.vision.eye_location)
         chance = random.randint(1, chance)
         if chance == 1:
@@ -488,9 +495,8 @@ class MainWindow(Frame):
                 action = 4
             elif str(event.char) == "\uf703":   # Right key pressed
                 action = 3
-            # "c" key flips cell
             else:
-                action = 5
+                action = 5  # "c" key flips cell
             self.act(action)
             self.update_agent()
         elif not self.manual_mode:
@@ -502,7 +508,7 @@ class MainWindow(Frame):
         
     def move_chance(self, chance=10):
         # When called, demon has a 1 in <chance> chance of moving in one
-        # of four directions.
+        #   of four directions.
         # Increasing <chance> decreases the chance of moving.
         loc = self.agent.vision.eye_location
         chance = random.randint(0, chance)
@@ -533,11 +539,13 @@ class MainWindow(Frame):
         self.agent.vision.update(self.data)
         self.display_data()
         self.display_agent_view()
-        
+ 
     def save(self):
         print("Saving brain...")
-        save_popup = SaveWindow(self.master, self.agent)
-        self.master.wait_window(save_popup.top)
+        brain_filename = filedialog.asksaveasfilename(
+            title="Save brain file",
+            filetypes=[("Path file", "*.pth")])
+        self.agent.save(brain_filename)
         
     def scale_render_place(self, colorweighted_data, scale, placement_label):
         # Take a rank 2 numpy array of gray-colorweighted data (each
@@ -611,7 +619,7 @@ class MainWindow(Frame):
         self.generation += 1
         self.generation_count.config(text=str(self.generation))
         # Force program to wait for an interval of time. This controls the
-        # game speed after pressing Start
+        #   game speed after pressing Start
         if self.running:# and not self.manual_mode:
             t = time.time() + self.interval
             while time.time() < t:
@@ -622,7 +630,7 @@ class MainWindow(Frame):
         
     def toggle_agent(self, *args):
         # Turn the agent on or off so you can see how the game evolves
-        # with or without the agent
+        #   with or without the agent
         self.agent_enabled = not self.agent_enabled
         self.display_data()
         self.display_agent_view()
@@ -672,27 +680,7 @@ class MainWindow(Frame):
             color = "red"
         else:
             color = "black"
-        self.reward_meter.itemconfig(self.reward_meter_level, fill=color)
-        
-        
-class SaveWindow(Frame):
-    def __init__(self, master, agent):
-        self.agent = agent
-        top = self.top = Toplevel(master)
-        top.title("Save")
-        self.top.geometry("350x150")
-        save_message = Label(top, text="Enter name of saved brain:")
-        save_message.pack()
-        self.entry = Entry(top)
-        self.entry.pack()
-        ok_button = Button(top, text="OK", command=self.execute)
-        ok_button.pack()
-        
-    def execute(self):
-        value = self.entry.get()
-        self.agent.save(value)
-        self.top.destroy()
-        
+        self.reward_meter.itemconfig(self.reward_meter_level, fill=color)     
         
 class SettingsWindow(Frame):
     def __init__(self, master, main_window):
