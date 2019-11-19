@@ -20,7 +20,8 @@ import time
 import numpy as np
 
 from tkinter import Tk, Frame, Button, Checkbutton, Menu, Label, Canvas, \
-                    BOTH, BOTTOM, RIGHT, LEFT, Toplevel, Entry, filedialog
+                    Scale, BOTH, BOTTOM, RIGHT, LEFT, HORIZONTAL, Toplevel, \
+                    Entry, filedialog, IntVar
                     
 from PIL import Image, ImageTk
 
@@ -193,7 +194,7 @@ class MainWindow(Frame):
                                  command=self.speed_up)
         slow_down_button = Button(button_menu, text="Slow Down", 
                                   command=self.slow_down)
-        toggle_agent_button = Checkbutton(button_menu, text="Enable Demon",
+        self.toggle_agent_button = Checkbutton(button_menu, text="Enable Demon",
                                           bg="#DDDDDD",
                                           command=self.toggle_agent)
         self.manual_mode_button = Checkbutton(button_menu, text="Manual Mode",
@@ -211,7 +212,7 @@ class MainWindow(Frame):
         stop_button.grid(row=0, column=7, padx=1)
         speed_up_button.grid(row=0, column=8, padx=1)
         slow_down_button.grid(row=0, column=9, padx=1)
-        toggle_agent_button.grid(row=1, columnspan=4, sticky="w", 
+        self.toggle_agent_button.grid(row=1, columnspan=4, sticky="w", 
                                  padx=3, pady=3)
         self.manual_mode_button.grid(row=2, columnspan=4, sticky="w", 
                                 padx=3, pady=3)
@@ -236,23 +237,25 @@ class MainWindow(Frame):
         
         file = Menu(menu)
         file.add_command(label="Exit", command=self.quit_game)
-        file.add_command(label="Save", command=self.save)
+        file.add_command(label="Save Brain", command=self.save)
         file.add_command(label="Load Brain", command=self.load)
-        file.add_command(label="Load Visual Field", command=self.load_visual_field)
+        file.add_command(label="Load Visual Field", 
+                         command=self.load_visual_field)
         file.add_command(label="Settings", command=self.change_settings)
         
         new = Menu(menu)
-        new.add_command(label="Random", command = self.randomize)
-        new.add_command(label="Seed", command = self.seed)
-        new.add_command(label="Glider Gun", command = self.gun)
+        new.add_command(label="Visual Field", command=self.change_visual_field)
+        new.add_command(label="Random", command=self.randomize)
+        new.add_command(label="Seed", command=self.seed)
+        new.add_command(label="Glider Gun", command=self.gun)
         
         run = Menu(menu)
-        run.add_command(label="Start", command = self.start_game)
-        run.add_command(label="Step", command = self.step)
-        run.add_command(label="Stop", command = self.stop_game)
-        run.add_command(label="Clear", command = self.clear)
-        run.add_command(label="Speed Up", command = self.speed_up)
-        run.add_command(label="Slow Down", command = self.slow_down)
+        run.add_command(label="Start", command=self.start_game)
+        run.add_command(label="Step", command=self.step)
+        run.add_command(label="Stop", command=self.stop_game)
+        run.add_command(label="Clear", command=self.clear)
+        run.add_command(label="Speed Up", command=self.speed_up)
+        run.add_command(label="Slow Down", command=self.slow_down)
         
         menu.add_cascade(label="File", menu=file)
         menu.add_cascade(label="New", menu=new)
@@ -271,12 +274,17 @@ class MainWindow(Frame):
         
         #   General controls:
         master.bind("<Escape>", self.quit_game)
+        master.bind("<e>", self.toggle_agent)
+        master.bind("<m>", self.toggle_manual_mode)
+        master.bind("<o>", self.slow_down)
+        master.bind("<p>", self.speed_up)
         master.bind("<q>", self.quit_game)
         master.bind("<s>", self.change_settings)
-        master.bind("<p>", self.speed_up)
-        master.bind("<o>", self.slow_down)
-        master.bind("<m>", self.toggle_manual_mode)
-        master.bind("<e>", self.toggle_agent)
+        master.bind("<v>", self.change_visual_field)
+        
+        
+        
+        
     
     def act(self, a):
         # Make demon take an action based on int parameter <a>:
@@ -334,6 +342,10 @@ class MainWindow(Frame):
         self.agent.vision.update(self.data)
         self.display_agent_view()
         self.display_data()
+        
+    def change_visual_field(self, *args):
+        vf_popup = VisualFieldWindow(self.master, self)
+        self.master.wait_window(vf_popup.top)
         
     def conway_rule(self, x, y):
         # Get state of cell at coordinates (x, y) and those of its neighbors
@@ -483,7 +495,7 @@ class MainWindow(Frame):
     def load_visual_field(self):
         new_vf = [[]]
         print("Select visual field file")
-        vf_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Saved_brains", 
+        vf_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Visual_field_files", 
             title="Select visual field file")
         vf_file = open(vf_filename, "r")
         eye_location_given = False
@@ -616,6 +628,9 @@ class MainWindow(Frame):
             filetypes=[("Path file", "*.pth")])
         self.agent.save(brain_filename)
         
+    def save_visual_field(self, vf):
+        pass
+        
     def scale_render_place(self, colorweighted_data, scale, placement_label):
         # Take a rank 2 numpy array of gray-colorweighted data (each
         #   value from 0 - 255), scale it according to the integer provided,
@@ -700,6 +715,11 @@ class MainWindow(Frame):
     def toggle_agent(self, *args):
         # Turn the agent on or off so you can see how the game evolves
         #   with or without the agent
+        for event in args:
+            if event.char == "e":
+                # Toggle the check graphic if activated by pressing 
+                #   the "e" key instead of clicking on the button
+                self.toggle_agent_button.toggle()
         self.agent_enabled = not self.agent_enabled
         self.display_data()
         self.display_agent_view()
@@ -750,6 +770,7 @@ class MainWindow(Frame):
         else:
             color = "black"
         self.reward_meter.itemconfig(self.reward_meter_level, fill=color)     
+        
         
 class SettingsWindow(Frame):
     def __init__(self, master, main_window):
@@ -828,6 +849,171 @@ class QuitWindow(Frame):
     def cancel(self, *args):
         self.cancelled = True
         self.top.destroy()
+        
+        
+class VisualFieldWindow(Frame):
+    def __init__(self, master, main_window):
+        self.master = master
+        self.main_window = main_window
+        self.vf = np.copy(main_window.vis_field)
+        self.vf_backup = np.copy(self.vf)
+        top = self.top = Toplevel(master)
+        self.top.title("Visual Field Editor")
+        self.scale = 20
+        self.refresh_window_size()
+        msg = Label(top, text=" Edit the visual field by\n"
+                              "clicking on the cells below",
+                              pady=10)
+        msg.grid(row=0, columnspan=3)
+        
+        # Button for expanding visual field editing grid
+        self.expand_button = Button(top, text="Expand grid",
+                                    command=self.grid_expand)
+        self.expand_button.grid(row=1, column=1)
+        
+        # Frame for holding visual field cells for editing
+        self.vf_frame = Frame(top)
+        # Grid of clickable cells controlling visual field state
+        self.vf_grid = [[]]
+        # Initialize visual field grid
+        self.refresh_grid()
+        
+        # Main buttons
+        ok_button = Button(top, text="Ok", command=self.execute)   
+        ok_button.bind("<Return>", self.execute)
+        ok_button.grid(row=3, column=0, sticky="e", pady=10)
+        
+        apply_button = Button(top, text="Apply", command=self.apply)
+        apply_button.bind("<Return>", self.apply)
+        apply_button.grid(row=3, column=1)
+        
+        cancel_button = Button(top, text="Cancel", command=self.cancel)
+        cancel_button.bind("<Return>", self.cancel)
+        cancel_button.grid(row=3, column=2, sticky="w")
+        
+        # Key bindings
+        self.top.bind("<e>", self.grid_expand)
+        self.top.bind("<Escape>", self.cancel)
+        self.top.bind("<Return>", self.execute)
+        
+    def apply(self, *args):
+        # Trim the visual field and apply updates to main game window and agent
+        self.trim_visual_field()
+        self.main_window.vis_field = np.copy(self.vf)
+        self.vf_backup = np.copy(self.vf)
+        self.main_window.agent = Agent(self.main_window.data, 
+                           self.main_window.vis_field, 
+                           self.main_window.eye_location, 
+                           gamma=0.9)
+        self.main_window.agent.vision.update(self.main_window.data)
+        self.main_window.display_data()
+        self.main_window.display_agent_view()
+    
+    def cancel(self, *args):
+        # Restore visual field to the way it was since opening editor or 
+        #   since last clicking "Apply" and then close the editor
+        self.main_window.vis_field = np.copy(self.vf_backup)
+        self.top.destroy()
+    
+    def execute(self, *args):
+        self.apply()
+        self.top.destroy()
+        
+    def flip(self, row, col):
+        if self.vf[row][col] == 0:
+            self.vf[row][col] = 1
+        elif self.vf[row][col] == 1:
+            self.vf[row][col] = 0
+        r = self.render_cell_image(self.vf[row][col])
+        self.vf_grid[row][col].configure(image=r) 
+        self.vf_grid[row][col].image = r
+
+    def grid_expand(self, *args):
+        # Expand the grid dimensions by one cell on each side
+        new_grid = np.zeros((len(self.vf)+2, len(self.vf[0])+2), dtype="uint8")
+        for i in range(len(self.vf)):
+            for j in range(len(self.vf[i])):
+                new_grid[i + 1][j + 1] = self.vf[i][j]
+        self.vf = np.copy(new_grid)
+        self.refresh_grid()
+        
+    def refresh_grid(self):
+        for i in range(len(self.vf_grid)):
+            for j in range(len(self.vf_grid[i])):
+                self.vf_grid[i][j].destroy()
+        self.vf_frame.destroy()
+        self.vf_frame = Frame(self.top, borderwidth=4, 
+                              relief="ridge", 
+                              bg="gray")
+        self.vf_frame.grid(row=2, columnspan=3, padx=20, pady=20)
+        self.vf_grid = [[] for row in self.vf]
+        for i in range(len(self.vf)):
+            for j in range(len(self.vf[i])):
+                render = self.render_cell_image(self.vf[i][j])
+                cell = Label(self.vf_frame, image=render, 
+                             borderwidth=1, bg="#EEEEEE")
+                self.vf_grid[i].append(cell)
+                self.vf_grid[i][j].image = render
+                self.vf_grid[i][j].grid(row=i, column=j)
+                self.vf_grid[i][j].bind("<Button-1>", lambda event, 
+                                        row=i, col=j: self.flip(row, col))
+        self.refresh_window_size()
+        
+    def refresh_window_size(self):
+        self.top.geometry("{width}x{height}".format( \
+                          width = int(1.1*len(self.vf[0])*self.scale+100),
+                          height = int(1.1*len(self.vf)*self.scale+220)))
+        
+    def render_cell_image(self, cell):
+        if cell == 0:
+            colorweighted_data = 255
+        elif cell == 1:
+            colorweighted_data = 200
+        else:
+            colorweighted_data = 100
+        scaled_data = np.kron(colorweighted_data, 
+                              np.ones((self.scale, self.scale)))
+        raw_img = Image.fromarray(scaled_data)
+        render = ImageTk.PhotoImage(raw_img)
+        return render
+    
+    def trim_visual_field(self):
+        # Trim any outermost rows or columns that have only zeros
+        trimmed_vf = np.copy(self.vf)
+        # Top rows
+        all_zeros = True
+        while(all_zeros):
+            for i in trimmed_vf[0]:
+                if i == 1 or i == 2:
+                    all_zeros = False
+            if all_zeros:
+                trimmed_vf = np.copy(trimmed_vf[1:])  
+        # Bottom rows
+        all_zeros = True
+        while(all_zeros):
+            for i in trimmed_vf[-1]:
+                if i == 1 or i == 2:
+                    all_zeros = False
+            if all_zeros:
+                trimmed_vf = np.copy(trimmed_vf[:-1])  
+        # Left columns        
+        all_zeros = True
+        while(all_zeros):
+            for i in trimmed_vf:
+                if i[0] == 1 or i[0] == 2:
+                    all_zeros = False
+            if all_zeros:
+                trimmed_vf = np.copy(trimmed_vf[:, 1:])
+        # Right columns        
+        all_zeros = True
+        while(all_zeros):
+            for i in trimmed_vf:
+                if i[-1] == 1 or i[-1] == 2:
+                    all_zeros = False
+            if all_zeros:
+                trimmed_vf = np.copy(trimmed_vf[:, :-1])
+        self.vf = np.copy(trimmed_vf)
+        self.refresh_grid()
         
     
 root = Tk()

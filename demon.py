@@ -15,7 +15,7 @@ import torch.optim as optim
 
 class Agent():
     def __init__(self, env_data, vf, abs_eye_loc, gamma):
-        vision_size = vf.sum() - 1
+        vision_size = int(vf.sum() - 1)
         self.vision = Vision(env_data, vf, abs_eye_loc)
         self.brain = Brain(vision_size)
         self.gamma = gamma
