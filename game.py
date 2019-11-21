@@ -238,6 +238,7 @@ class MainWindow(Frame):
         file = Menu(menu)
         file.add_command(label="Exit", command=self.quit_game)
         file.add_command(label="Save Brain", command=self.save)
+        file.add_command(label="Save Visual Field", command=self.save_visual_field)
         file.add_command(label="Load Brain", command=self.load)
         file.add_command(label="Load Visual Field", 
                          command=self.load_visual_field)
@@ -514,7 +515,7 @@ class MainWindow(Frame):
                     print("ERROR: Bad visual field file.\n"
                           "File contains more than one '2'.\n"
                           "Must provide only a single '2' to indicate\n"
-                          "agent eye location.")
+                          "eye location.")
                     vf_file.close()
                     return
             elif cell == "\n":
@@ -533,7 +534,7 @@ class MainWindow(Frame):
     
         if not eye_location_given:
             print("ERROR: Bad visual field file.\n"
-                  "Must provide a '2' to indicate agent eye location.")
+                  "Must provide a '2' to indicate eye location.")
             vf_file.close()
             return
         
@@ -556,10 +557,9 @@ class MainWindow(Frame):
         self.agent.vision.update(self.data)
         self.display_data()
         self.display_agent_view()
-        print("Loaded new visual field.")
+        print("Loaded new visual field:", vf_filename)
         return new_vf
                 
-        
     def manual_action(self, event):
         if self.agent_enabled and self.manual_mode:
             #print("Manual action taken:", repr(event.char))
@@ -607,12 +607,11 @@ class MainWindow(Frame):
         if self.running:
             self.stop_game()
             paused = True
-        quit_popup = QuitWindow(root)
+        quit_popup = QuitWindow(root, self.agent)
         root.wait_window(quit_popup.top)
         if quit_popup.cancelled and paused:
             self.start_game()
 
-        
     def randomize(self):
         # Initialize a random state on the whole grid
         self.generation = 0
@@ -628,8 +627,18 @@ class MainWindow(Frame):
             filetypes=[("Path file", "*.pth")])
         self.agent.save(brain_filename)
         
-    def save_visual_field(self, vf):
-        pass
+    def save_visual_field(self):
+        # Save the visual field as a text file
+        vf_filename = filedialog.asksaveasfilename(
+            title="Save visual field file",
+            filetypes=[("Text file", "*.txt")])
+        vf_file = open(vf_filename, "w+")
+        for i in range(len(self.vis_field)):
+            for j in range(len(self.vis_field[i])):
+                vf_file.write(str(self.vis_field[i][j]))
+            if i < len(self.vis_field) - 1:
+                vf_file.write("\n")
+        vf_file.close()
         
     def scale_render_place(self, colorweighted_data, scale, placement_label):
         # Take a rank 2 numpy array of gray-colorweighted data (each
@@ -824,8 +833,9 @@ class SettingsWindow(Frame):
         
         
 class QuitWindow(Frame):
-    def __init__(self, master):
+    def __init__(self, master, agent):
         self.master = master
+        self.agent = agent
         self.cancelled = False
         top = self.top = Toplevel(master)
         top.geometry("230x100")
@@ -843,6 +853,7 @@ class QuitWindow(Frame):
         cancel_button.grid(row=1, column=1, sticky="w")
         
     def quit_app(self, *args):
+        self.agent.save()
         self.top.destroy()
         quit()
         
