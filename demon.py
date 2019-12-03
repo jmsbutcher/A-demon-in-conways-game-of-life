@@ -30,7 +30,7 @@ class Agent():
         probabilities = F.softmax(self.brain(state), dim=1)
         #print("Action Probabilities: ", probabilities)      # For debugging
         for p in probabilities[0]:
-            if p <= 0:
+            if p <= 0.0:
                 print("Warning: Encountered Q-value less than 0")
                 return 0
         action = probabilities.multinomial(num_samples=1)
@@ -82,7 +82,7 @@ class Agent():
             checkpoint = torch.load(name)
             self.brain.load_state_dict(checkpoint["state_dict"])
             self.optimizer.load_state_dict(checkpoint["optimizer"])
-            print("Loaded {}.".format(name))
+            print("Loaded brain {}.".format(name))
             return
         else:
             print("Cancelled loading brain.")
@@ -106,11 +106,15 @@ class Brain(nn.Module):
     
 class RewardScheme:
     def __init__(self, vf,
+                       vision,
                        schemetype, 
                        shape_name=None,
                        desired_shape=None):
         # The agent's visual field; numpy array of rank 2
         self.vf = vf
+        
+        # The agent's vision object for retriving visual data
+        self.vision = vision
         
         # Scheme types:
         #  - "shape": get high reward for having the desired shape
@@ -119,22 +123,21 @@ class RewardScheme:
         #      in the visual field.
         #  - "minimize": get higher reward based on number of dead cells
         #      in the visual field
-        self.schemetype = schemetype.lower()
-        
-        # Optional name for the desired shape
-        self.shape_name = shape_name
-        
-        # Desired shape: a numpy array of rank 2, representing the desired 
-        #   shape of live/dead cells in the agent's visual field.
-        # Example: If you want the agent to make flippers, do this:
-        #   flipper_scheme = RewardScheme(desired_shape=np.array([[1, 1, 1],
-        #                                                         [0, 0, 0],
-        #                                                         [1, 1, 1]]))
-        # (Hint: it might be better to make a 5x5 grid instead, with "1"s
-        #  all around to keep the flipper isolated)
-        self.desired_shape = desired_shape
+        self.schemetype = schemetype
+        self.exact_match = False
         self.reward = 0
         if schemetype == "shape":
+            # Optional name for the desired shape
+            self.shape_name = shape_name
+            # Desired shape: a numpy array of rank 2, representing the desired 
+            #   shape of live/dead cells in the agent's visual field.
+            # Example: If you want the agent to make flippers, do this:
+            #   flipper = RewardScheme(desired_shape=np.array([[1, 1, 1],
+            #                                                  [0, 0, 0],
+            #                                                  [1, 1, 1]]))
+            # (Hint: it might be better to make a 5x5 grid instead, with "1"s
+            #   all around to keep the flipper isolated)
+            self.desired_shape = desired_shape
             if desired_shape is not None:
                 print("Reward scheme: shape")
                 print("-Make the following shape:")
@@ -155,29 +158,88 @@ class RewardScheme:
         elif schemetype == "minimize":
             print("Reward scheme: minimize")
             print("-Minimize live cells")
+        elif schemetype is None:
+            print("No reward scheme\n"
+              "Create new reward scheme by clicking 'New' --> 'Reward Scheme'")
         else:
             print("ERROR: Must provide a reward scheme type.")
-    
-    def calc_reward(self, view):
-        # Check that the view has the same dimensions as the visual field
-        if self.vf.shape != view.shape:
-            print("ERROR: Reward shape doesn't match visual field shape")
-            return
-        reward = 1
-        exact_match = True
-        for i in range(len(view)):
-            for j in range(len(view[i])):
-                if self.vf[i][j] > 0:
-                    if view[i][j] == self.desired_shape[i][j]:
-                        reward += 0.1
-                    else:
-                        reward -= 0.1
-                        exact_match = False
-        if exact_match:
-            reward = 10
+            
+    def check_for_exact_match(self):
+        return self.exact_match
+            
+    def get_reward(self):
+        if self.schemetype == "shape":
+            view = self.vision.get_view()
+            # Check that the view has the same dimensions as the visual field
+            if self.vf.shape != view.shape:
+                print("ERROR: Reward shape doesn't match visual field shape")
+                return
+            r = 1
+            self.exact_match = True
+            for i in range(len(view)):
+                for j in range(len(view[i])):
+                    if self.vf[i][j] > 0:
+                        if view[i][j] == self.desired_shape[i][j]:
+                            r += 0.1
+                        else:
+                            r -= 0.1
+                            self.exact_match = False
+            reward = r
+            if self.exact_match:
+                reward = 10
+                
+        elif self.schemetype == "maximize":
+            viewdata = self.vision.get_viewdata()
+            r = 0
+            for cell in viewdata:
+                if cell == 0:
+                    r += 1
+            reward = int(r / len(viewdata) * 20)
+            
+        elif self.schemetype == "minimize":
+            viewdata = self.vision.get_viewdata()
+            r = 0
+            for cell in viewdata:
+                if cell == 1:
+                    r += 1
+            reward = int(r / len(viewdata) * 20)
+            
+        else:
+            reward = 0
+            
         return reward
             
+    def get_reward_text(self):
+        if self.schemetype == "shape":
+            return "Match view\n\n"\
+                   "Try to get this shape\nin the visual field:"
+        elif self.schemetype == "maximize":
+            return "Maximize life in\n" \
+                    "the visual field."
+        elif self.schemetype == "minimize":
+            return "Minimize life in\n" \
+                   "the visual field."
+        elif self.schemetype is None:
+            return "No reward scheme"
+                   
+    def get_shape(self):
+        return self.desired_shape
     
+    def get_antishape(self):
+        return abs(self.desired_shape - 1)
+    
+    def set_schemetype(self, new_schemetype):
+        self.schemetype = new_schemetype
+        print("New reward scheme:")
+        if self.schemetype is None:
+            self.shape_name = None
+            self.desired_shape = None
+            
+    def set_shape(self, new_desired_shape, new_shapename=None):
+        self.schemetype = "shape"
+        self.desired_shape = new_desired_shape
+            
+            
 class ReplayMemory(object):
     def __init__(self, capacity):
         self.capacity = capacity

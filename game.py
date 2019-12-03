@@ -18,10 +18,12 @@ import random
 from random import randint
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 from tkinter import Tk, Frame, Button, Checkbutton, Menu, Label, Canvas, \
-                    Scale, BOTH, BOTTOM, RIGHT, LEFT, HORIZONTAL, Toplevel, \
-                    Entry, filedialog, IntVar
+                    Scale, BOTH, BOTTOM, RIGHT, LEFT, HORIZONTAL, Y, Toplevel,\
+                    Entry, filedialog, IntVar, Listbox, Scrollbar, END, \
+                    OptionMenu, StringVar
                     
 from PIL import Image, ImageTk
 
@@ -41,6 +43,8 @@ flipper = np.array([[1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1],
                     [1, 1, 1, 1, 1, 1, 1]])
+
+anti_flipper = np.copy(abs(flipper - 1))
 
 
 # Default visual field shapes
@@ -89,57 +93,61 @@ class MainWindow(Frame):
         self.view_scale = 15    # pixel size of agent view in display console
         self.data = np.ones(self.size, dtype="uint8")  # initialize cell states
         self.running = False    # game is paused until start_game() is called
-        self.interval = 0.5    # time between steps; how fast the game runs
+        self.interval = 0.5     # time between steps; how fast the game runs
         self.generation = 0     # how many steps (generations) has passed
         # Beginning location of demon's eye:
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
-        # Select shape of the demon's visual field from the list above:
+        # Default shape of the demon's visual field:
         self.vis_field = large_vf  
-        # Create glider reward scheme (for testing)
-        self.match_count = 0
-        self.reward_scheme = RewardScheme(self.vis_field,
-                                                 schemetype="shape",
-                                                 shape_name="Flipper",
-                                                 desired_shape=flipper)
         
         # Create agent object (the demon)
+        self.agent = self.initialize_agent(self.data, 
+                                           self.vis_field,
+                                           self.eye_location)
+        """
         self.agent = Agent(self.data, 
                            self.vis_field, 
                            self.eye_location, 
                            gamma=0.9)
         self.agent.vision.update(self.data)
+        """
         self.agent_enabled = False
         self.manual_mode = False
-        
-        self.last_reward = 0
         self.agent_speed = 10 # How many times the demon updates every game step
         self.wait = False     # Allows the demon to wait until the next step
         
-        # Calculate size of app window
-        win_X = self.size[1] * self.scale + 193
-        win_Y = self.size[0] * self.scale + 101
-        self.master.geometry("{width}x{height}".format(width=win_X, height=win_Y))
-        #self.master.minsize(win_X, win_Y)
-        self.master.minsize(max(win_X, 690), max(win_Y, 551))
         
-        # Right Frame, Display Console: for displaying demon's readouts
+        """
+        self.reward_scheme = RewardScheme(self.vis_field,
+                                          self.agent.vision,
+                                          schemetype="maximize")#,
+                                          #shape_name="Flipper",
+                                          #esired_shape=flipper)
+        self.match_count = 0
+        self.last_reward = 0
+        """
+        
+        #---------------------------------------------------------------------
+        # Frames and Widgets
+        #---------------------------------------------------------------------
+        # Right Frame - Display Console: for displaying demon's readouts
         self.display_console = Frame(self.master, borderwidth=5,
-                                     relief="ridge", width=200, bg="gray")
+                                     relief="ridge", width=400, bg="gray")
         self.display_console.pack(fill=BOTH, side=RIGHT, expand=1)
         
         # Initialize and display generation count
-        generation_label = Label(self.display_console, text="Gen #:",
+        generation_label = Label(self.display_console, text="Generation #:",
                                       fg="white", bg="gray")
-        generation_label.grid(row=0, column=0)
+        generation_label.grid(row=0, columnspan=2)
         self.generation_count = Label(self.display_console, 
                                       text=str(self.generation),
-                                      font=("Arial", 20), 
+                                      font=("Arial", 20), width=3, 
                                       fg="white", bg="gray")
-        self.generation_count.grid(row=0, column=1, sticky="w")
+        self.generation_count.grid(row=0, column=2, sticky="w")
         
         # Initialize and display a close-up of what the demon currently sees
         self.agentview_display = Label(self.display_console, image=None)
-        self.agentview_display.grid(row=1, columnspan=2)
+        self.agentview_display.grid(row=1, columnspan=3)
         self.display_agent_view()
         
         # Initialize and display meter readings in display console
@@ -148,35 +156,67 @@ class MainWindow(Frame):
                              fg="white", bg="gray")
         reward_label.grid(row=2, column=0, padx=4, pady=7, sticky="w")
         self.reward_meter = Canvas(self.display_console, width=100, height=15)
-        self.reward_meter.grid(row=2, column=1)
+        self.reward_meter.grid(row=2, column=1, columnspan=2)
         self.reward_meter_level = self.reward_meter.create_rectangle( \
                                   5, 5, 6, 15, width=1, fill="black")
         
         # Initialize and display reward scheme in display console
+        # Default reward scheme is to maximize live cells in visual field
+        self.reward_scheme = self.initialize_reward_scheme(self.vis_field,
+                                                        self.agent.vision,
+                                                        None)
         reward_scheme_label = Label(self.display_console, 
                                     text="\nCurrent reward scheme:", 
                                     fg="white", bg="gray")
         reward_scheme_label.grid(row=4, columnspan=2, pady=10, sticky="s")
-        reward_scheme_name = Label(self.display_console, 
-                                    text="Produce this shape:",
+        self.reward_scheme_name = Label(self.display_console, 
+                                    text=self.reward_scheme.get_reward_text(),
                                     fg="white", bg="gray")
-        reward_scheme_name.grid(row=5, columnspan=2, pady=10, sticky="s")        
-        self.reward_scheme_view = Label(self.display_console, image=None)
-        self.reward_scheme_view.grid(row=6, columnspan=2)
-        self.display_reward_scheme()
+        self.reward_scheme_name.grid(row=5, columnspan=2, pady=10, sticky="s")
         
-        self.message_box = Frame(self.display_console, 
-                                 borderwidth=2,
-                                 relief=None, 
-                                 #width=180,
-                                 #height=180,
-                                 bg="gray")
-        self.message_box.grid(row=7, columnspan=2, pady= 10)
+        self.reward_scheme_view = Label(self.display_console, image=None)
+        #self.reward_scheme_view.grid(row=6, columnspan=3)
+        #self.display_reward_scheme()
+        
+        self.new_reward_scheme_button = Button(self.display_console,
+                                             text="New Reward Scheme",
+                                             command=self.change_reward_scheme)
+        self.new_reward_scheme_button.grid(row=6, columnspan=2, pady=30, sticky="N")
+        
+        
+        # Initialize and display message list in display console
+        self.message_frame = Frame(self.display_console, 
+                                   borderwidth=0,
+                                   relief=None, 
+                                   #width=10,
+                                   #height=10,
+                                   bg="gray")
+        self.message_frame.grid(row=7, columnspan=3, pady=10)
+        self.message_list = Listbox(self.message_frame, width = 30, font=("Arial", 10))
+        self.message_list.pack(side=LEFT, fill=BOTH)
+        self.message_scrollbar = Scrollbar(self.message_frame, command=self.message_list.yview)
+        self.message_scrollbar.pack(side=RIGHT, fill=Y)
+        self.message_list.configure(yscrollcommand = self.message_scrollbar.set)
 
-        # Bottom Frame: for game control buttons
+        # Bottom Frame - Button toolbar: for game control buttons
         button_menu = Frame(self.master, bg="#DDDDDD", 
                             relief="ridge", borderwidth=5)
-        button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)  
+        
+        button_menu.pack(fill=BOTH, side=BOTTOM, expand=0)        
+        
+        # Main Frame - Environment: display of the cell grid environment 
+        self.win_X = self.size[0] * self.scale
+        self.win_Y = self.size[1] * self.scale 
+        self.environment = Frame(self.master, 
+                                 width=self.win_Y, 
+                                 height=self.win_X, 
+                                 bg="black")
+        self.environment.pack(fill=BOTH, side=LEFT, expand=1, ipadx=6, ipady=6)
+        
+        # Initialize and display the environment cells
+        self.env_img = Label(self.environment, image=None)
+        self.env_img.place(x=3, y=3)
+        self.display_data()
         
         #---------------------------------------------------------------------
         # Buttons
@@ -217,18 +257,6 @@ class MainWindow(Frame):
         self.manual_mode_button.grid(row=2, columnspan=4, sticky="w", 
                                 padx=3, pady=3)
         
-        # Environment Frame: the main cell grid
-        self.environment = Frame(self.master, 
-                                 width=win_X, 
-                                 height=win_Y, 
-                                 bg="black")
-        self.environment.pack(fill=BOTH, side=LEFT, expand=1)
-        
-        # Initialize and display the environment cells
-        self.env_img = Label(self.environment, image=None)
-        self.env_img.place(x=0, y=0)
-        self.display_data()
-        
         #---------------------------------------------------------------------
         # Menus
         #---------------------------------------------------------------------
@@ -238,14 +266,22 @@ class MainWindow(Frame):
         file = Menu(menu)
         file.add_command(label="Exit", command=self.quit_game)
         file.add_command(label="Save Brain", command=self.save)
-        file.add_command(label="Save Visual Field", command=self.save_visual_field)
+        file.add_command(label="Save Visual Field", 
+                         command=self.save_visual_field)
+        file.add_command(label="Save Reward Shape", 
+                         command=self.save_reward_scheme_shape)
         file.add_command(label="Load Brain", command=self.load)
         file.add_command(label="Load Visual Field", 
                          command=self.load_visual_field)
+        file.add_command(label="Load Reward Shape", 
+                         command=self.load_reward_scheme_shape)
         file.add_command(label="Settings", command=self.change_settings)
         
         new = Menu(menu)
-        new.add_command(label="Visual Field", command=self.change_visual_field)
+        new.add_command(label="Visual Field", 
+                        command=self.change_visual_field)
+        new.add_command(label="Reward Scheme", 
+                        command=self.change_reward_scheme)
         new.add_command(label="Random", command=self.randomize)
         new.add_command(label="Seed", command=self.seed)
         new.add_command(label="Glider Gun", command=self.gun)
@@ -258,14 +294,18 @@ class MainWindow(Frame):
         run.add_command(label="Speed Up", command=self.speed_up)
         run.add_command(label="Slow Down", command=self.slow_down)
         
+        win = Menu(menu)
+        win.add_command(label="Reward Plot", command=self.display_reward_plot)
+        
         menu.add_cascade(label="File", menu=file)
         menu.add_cascade(label="New", menu=new)
         menu.add_cascade(label="Run", menu=run)
+        menu.add_cascade(label="Window", menu=win)
         
         #---------------------------------------------------------------------
         # Key Bindings
         #---------------------------------------------------------------------
-        #   Manual mode controls:
+        # Manual mode controls:
         master.bind("<space>", self.manual_action)
         master.bind("<Up>", self.manual_action)
         master.bind("<Down>", self.manual_action)
@@ -273,7 +313,7 @@ class MainWindow(Frame):
         master.bind("<Right>", self.manual_action)
         master.bind("<c>", self.manual_action)
         
-        #   General controls:
+        # General controls:
         master.bind("<Escape>", self.quit_game)
         master.bind("<e>", self.toggle_agent)
         master.bind("<m>", self.toggle_manual_mode)
@@ -282,11 +322,9 @@ class MainWindow(Frame):
         master.bind("<q>", self.quit_game)
         master.bind("<s>", self.change_settings)
         master.bind("<v>", self.change_visual_field)
+        master.bind("<r>", self.change_reward_scheme)
         
         
-        
-        
-    
     def act(self, a):
         # Make demon take an action based on int parameter <a>:
         # 0 --> Wait until next step
@@ -310,7 +348,7 @@ class MainWindow(Frame):
             self.flip_cell()                 #; print("Flipped", end=" ")
             
     def clear(self):
-        self.generation = 0
+        #self.generation = 0
         blank_data = np.ones(self.size, dtype="uint8")
         self.data = blank_data
         self.agent.vision.update(blank_data)
@@ -329,8 +367,10 @@ class MainWindow(Frame):
         #   and pixel size of each cell
         oldsize = self.size
         old_data = self.data
-        self.size = (newwidth, newheight)
+        self.size = (newheight, newwidth)
         self.scale = newscale
+        self.win_X = self.size[0] * self.scale
+        self.win_Y = self.size[1] * self.scale
         self.data = np.ones(self.size, dtype="uint8")
         # Preserve existing environment data after resizing
         for i in range(min(len(old_data), len(self.data))):
@@ -343,10 +383,49 @@ class MainWindow(Frame):
         self.agent.vision.update(self.data)
         self.display_agent_view()
         self.display_data()
+        self.environment.configure(width=self.win_Y, height=self.win_X)
+        
+    def change_reward_scheme(self, *args):
+        popup = RewardSchemeWindow(self.master, self)
+        self.master.wait_window(popup.top)
+        schemetype, shape = popup.get()
+        print(schemetype)
+        self.reward_scheme = self.initialize_reward_scheme(self.vis_field,
+                                                           self.agent.vision,
+                                                           schemetype,
+                                                           None,
+                                                           shape)
+        self.agent = self.initialize_agent(self.data, self.vis_field,
+                                           self.eye_location)
+        print("New SCHEME:", self.reward_scheme.schemetype)
+        self.reward_scheme_name.configure( \
+                                text=self.reward_scheme.get_reward_text())
+        
+        if self.reward_scheme.schemetype is None:
+            #self.new_reward_scheme_button = Button(self.display_console,
+            #                                 text="New Reward Scheme",
+            #                                 command=self.change_reward_scheme)
+            self.new_reward_scheme_button.grid(row=6, columnspan=2, 
+                                               pady=30, sticky="N")
+        else:
+            self.new_reward_scheme_button.grid_remove()
+            if self.reward_scheme.schemetype == "shape":
+                self.reward_scheme_view.grid(row=6, columnspan=3)
+                self.display_reward_scheme()
         
     def change_visual_field(self, *args):
-        vf_popup = VisualFieldWindow(self.master, self)
-        self.master.wait_window(vf_popup.top)
+        popup = GridEditorWindow(self.master, self, 
+                                 self.vis_field, "visual field")
+        self.master.wait_window(popup.top)
+        
+    def display_exact_match(self):
+        if self.reward_scheme.check_for_exact_match():
+            self.match_count += 1
+            self.message_list.insert(0, "Exact Match #{0:2d} - \n"
+                "Generation: {1:}".format(self.match_count, self.generation))
+            print("EXACT MATCH {0:2d} - Generation {1:2d}".format( \
+                                                 self.match_count,
+                                                 self.generation))
         
     def conway_rule(self, x, y):
         # Get state of cell at coordinates (x, y) and those of its neighbors
@@ -415,23 +494,39 @@ class MainWindow(Frame):
         self.scale_render_place(colorweighted_data, self.scale, self.env_img)
 
     def display_reward_scheme(self):
-        rshape = self.reward_scheme.desired_shape
-        colorweighted_data = np.ones(rshape.shape)
-        for i in range(len(rshape)):
-            for j in range(len(rshape[i])):
-                if self.vis_field[i][j] == 0:
-                    colorweighted_data[i][j] = 255
-                elif self.vis_field[i][j] == 1:
-                    if rshape[i][j] == 1:
-                        colorweighted_data[i][j] = 200
-                    else:
-                        colorweighted_data[i][j] = 0
-                elif self.vis_field[i][j] == 2:
-                    if rshape[i][j] == 1:
+        if self.reward_scheme.schemetype == "shape":
+            rshape = self.reward_scheme.get_shape()
+            colorweighted_data = np.ones(rshape.shape)
+            for i in range(len(rshape)):
+                for j in range(len(rshape[i])):
+                    if self.vis_field[i][j] == 0:
                         colorweighted_data[i][j] = 255
-                    else:
-                        colorweighted_data[i][j] = 0
-  
+                    elif self.vis_field[i][j] == 1:
+                        if rshape[i][j] == 1:
+                            colorweighted_data[i][j] = 200
+                        else:
+                            colorweighted_data[i][j] = 0
+                    elif self.vis_field[i][j] == 2:
+                        if rshape[i][j] == 1:
+                            colorweighted_data[i][j] = 255
+                        else:
+                            colorweighted_data[i][j] = 0
+            self.scale_render_place(colorweighted_data, 15, 
+                                    self.reward_scheme_view)
+            
+        #elif self.reward_scheme.schemetype is None:
+        else:
+            self.reward_scheme_view.configure(image = None)
+            self.reward_scheme_view.image = None
+            self.reward_scheme_view.grid_remove()
+            
+        self.reward_scheme_name.configure( \
+                                text=self.reward_scheme.get_reward_text())
+            
+    def display_reward_plot(self):
+        plt.plot(self.avg_running_reward)
+        plt.show()
+            
     def flip_cell(self, chance=1):
         # When called, agent has a 1 in <chance> chance of flipping the
         #   cell at its current location from 1 to 0 or vice versa.
@@ -439,33 +534,7 @@ class MainWindow(Frame):
         chance = random.randint(1, chance)
         if chance == 1:
             self.data[loc] = abs(self.data[loc] - 1)    # flip cell
-            
-    def get_reward(self):
-        """
-        r = self.reward_scheme.calc_reward(self.agent.vision.get_view())
-        if r == 10:
-            self.match_count += 1 
-            exact_match_msg = Label(self.message_box, 
-                                    text="Exact Match {0:2d}\n"
-                                    "Generation: {1:}".format( \
-                                                 self.match_count, 
-                                                 self.generation),
-                                    fg="white", bg="gray")
-            exact_match_msg.pack()
-            print("EXACT MATCH {0:2d} - Generation {1:2d}".format( \
-                                                 self.match_count,
-                                                 self.generation))
-        return r
-        """
-        # Calculate reward based on how many live cells are in the visual field
-        r = 0
-        for cell in self.agent.vision.viewdata:
-            if cell == 0:
-                r += 1
-        reward = r   
-        return reward
-        
-        
+
     def gun(self):
         # Initialize a "Gosper's glider gun"
         self.generation = 0
@@ -486,12 +555,84 @@ class MainWindow(Frame):
         self.display_data()
         self.display_agent_view()
         
+    def initialize_agent(self, data, vf, eye_loc, gamma=0.9):
+        agent = Agent(data, vf, eye_loc, gamma)
+        agent.vision.update(data)
+        return agent
+    
+    def initialize_reward_scheme(self, vf, vision, schemetype,
+                                 name=None, shape=None):
+        reward_scheme = RewardScheme(vf, vision, schemetype, name, shape)
+        self.match_count = 0
+        self.last_reward = 0
+        self.reward_window = []
+        self.avg_running_reward = []
+        return reward_scheme
+        
     def load(self):
-        print("Loading last saved brain...")
+        print("Select brain file")
         brain_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Saved_brains", 
-            title="Select file",
+            title="Select brain file",
             filetypes=[("Path file", "*.pth")])
         self.agent.load(brain_filename)
+        
+    def load_reward_scheme_shape(self):
+        new_shape = [[]]
+        new_shapename = None
+        print("Select reward scheme shape file")
+        rss_filename = filedialog.askopenfilename(initialdir="/Users/JamesButcher/Documents/Programming/Game-of-Life-AI/A-demon-in-conways-game-of-life/Reward_scheme_shapes", 
+            title="Select visual field file")
+        rss_file = open(rss_filename, "r")
+        row = 0
+        while True:
+            cell = rss_file.read(1)
+            if cell == "<":
+                new_shapename = ""
+                letter_count = 0
+                char = rss_file.read(1)
+                while char != ">" and letter_count < 50:
+                    new_shapename += char
+                    letter_count += 1
+                    char = rss_file.read(1)
+                rss_file.read(1)
+            elif cell == "0":
+                new_shape[row].append(0)
+            elif cell == "1":
+                new_shape[row].append(1)
+            elif cell == "\n":
+                new_shape.append([])
+                row += 1
+            elif cell == "":
+                break
+            else:
+                print("ERROR: Bad reward scheme shape file.\n"
+                      "File must contain only '0's and '1's without spaces.\n"
+                      "Detected '{}'.".format(cell))
+                rss_file.close()
+                return
+        
+        new_shape = np.array(new_shape)
+        if new_shape.shape != self.vis_field.shape:
+            print("ERROR: Reward scheme shape file must have the same\n"
+                  "number of rows and columns as the current visual field.\n"
+                  "  Visual field dimensions:         {0}\n"
+                  "  Reward scheme shape dimensions:  {1}".format( \
+                                                     self.vis_field.shape,
+                                                     new_shape.shape))
+            rss_file.close()
+            return
+
+        rss_file.close()
+        self.reward_scheme.set_shape(new_shape, new_shapename)
+        self.agent = self.initialize_agent(self.data, self.vis_field,
+                                           self.eye_location)
+        self.new_reward_scheme_button.grid_remove()
+        self.reward_scheme_view.grid(row=6, columnspan=3)
+        self.display_reward_scheme()
+        print("Loaded reward scheme shape:", rss_filename)
+        if new_shapename is not None:
+            print("New shape name:", new_shapename)
+        return new_shape, new_shapename
         
     def load_visual_field(self):
         new_vf = [[]]
@@ -550,14 +691,11 @@ class MainWindow(Frame):
 
         vf_file.close()
         self.vis_field = new_vf
-        self.agent = Agent(self.data, 
-                           self.vis_field, 
-                           self.eye_location, 
-                           gamma=0.9)
-        self.agent.vision.update(self.data)
+        self.agent = self.initialize_agent(self.data, self.vis_field,
+                                           self.eye_location)
         self.display_data()
         self.display_agent_view()
-        print("Loaded new visual field:", vf_filename)
+        print("Loaded visual field:", vf_filename)
         return new_vf
                 
     def manual_action(self, event):
@@ -629,9 +767,12 @@ class MainWindow(Frame):
         
     def save_visual_field(self):
         # Save the visual field as a text file
+        print("Saving visual field...")
         vf_filename = filedialog.asksaveasfilename(
             title="Save visual field file",
             filetypes=[("Text file", "*.txt")])
+        if vf_filename == "":
+            vf_filename = "last_visual_field.txt"
         vf_file = open(vf_filename, "w+")
         for i in range(len(self.vis_field)):
             for j in range(len(self.vis_field[i])):
@@ -639,6 +780,25 @@ class MainWindow(Frame):
             if i < len(self.vis_field) - 1:
                 vf_file.write("\n")
         vf_file.close()
+        print("Visual field saved as {}".format(vf_filename))
+        
+    def save_reward_scheme_shape(self):
+        # Save the reward scheme as a text file
+        print("Saving reward scheme shape...")
+        shape = self.reward_scheme.get_shape()
+        rss_filename = filedialog.asksaveasfilename(
+            title="Save reward scheme shape file",
+            filetypes=[("Text file", "*.txt")])
+        if rss_filename == "":
+            rss_filename = "last_reward_scheme_shape.txt"
+        rss_file = open(rss_filename, "w+")
+        for i in range(len(shape)):
+            for j in range(len(shape[i])):
+                rss_file.write(str(shape[i][j]))
+            if i < len(shape) - 1:
+                rss_file.write("\n")
+        rss_file.close()
+        print("Reward scheme shape saved as {}".format(rss_filename))
         
     def scale_render_place(self, colorweighted_data, scale, placement_label):
         # Take a rank 2 numpy array of gray-colorweighted data (each
@@ -704,6 +864,7 @@ class MainWindow(Frame):
             # Update the demon X number of times --- set by self.agent_speed
             for i in range(self.agent_speed):
                 self.update_agent()
+                self.display_exact_match()
                 time.sleep(self.interval / self.agent_speed)
                 if self.wait == True:
                     break
@@ -750,19 +911,24 @@ class MainWindow(Frame):
         viewdata = self.agent.vision.get_viewdata()
         # Treat cells off the edge of the environment grid as dead: 1, not None
         viewdata = [1 if x is None else x for x in viewdata]
-        reward = self.get_reward()
+        reward = self.reward_scheme.get_reward()
         action = self.agent.update(reward, viewdata)
         if not self.manual_mode:
             self.act(action)        
             self.agent.vision.update(self.data)
         self.last_reward = reward
+        self.reward_window.append(reward)
+        if len(self.reward_window) > 1000:
+            del self.reward_window[0]
+        self.avg_running_reward.append( \
+            sum(self.reward_window) / (len(self.reward_window) + 1.0))
         self.update()
         self.display_data()
         self.display_agent_view()
         self.update_meters()
         
     def update_meters(self):        
-        reward_meter_scale = 5
+        reward_meter_scale = 10
         x0, y0, x1, y1 = self.reward_meter.coords(self.reward_meter_level)
         x1 = reward_meter_scale * self.last_reward
         if x1 < 2:
@@ -802,14 +968,14 @@ class SettingsWindow(Frame):
         self.grid_width_entry = Entry(s, width=3)
         self.grid_width_entry.bind("<Return>", self.execute)
         self.grid_width_entry.grid(row=1, column=1, sticky="w")
-        self.grid_width_entry.insert(0, str(self.main_window.size[0]))
+        self.grid_width_entry.insert(0, str(self.main_window.size[1]))
         
         grid_height_label = Label(s, text="Environment height:", bg="#CCCCCC")
         grid_height_label.grid(row=2, column=0, sticky="e")
         self.grid_height_entry = Entry(s, width=3)
         self.grid_height_entry.bind("<Return>", self.execute)
         self.grid_height_entry.grid(row=2, column=1, sticky="w")
-        self.grid_height_entry.insert(0, str(self.main_window.size[1]))
+        self.grid_height_entry.insert(0, str(self.main_window.size[0]))
         
         scale_label = Label(s, text="Scale:", bg="#CCCCCC")
         scale_label.grid(row=3, column=0, sticky="e")
@@ -862,30 +1028,105 @@ class QuitWindow(Frame):
         self.top.destroy()
         
         
-class VisualFieldWindow(Frame):
+class RewardSchemeWindow(Frame):
     def __init__(self, master, main_window):
         self.master = master
         self.main_window = main_window
-        self.vf = np.copy(main_window.vis_field)
-        self.vf_backup = np.copy(self.vf)
+        self.schemetype = self.main_window.reward_scheme.schemetype
+        self.shape = None
         top = self.top = Toplevel(master)
-        self.top.title("Visual Field Editor")
-        self.scale = 20
-        self.refresh_window_size()
-        msg = Label(top, text=" Edit the visual field by\n"
-                              "clicking on the cells below",
-                              pady=10)
+        self.top.title("Reward Scheme Editor")
+        
+        msg = Label(top, text="Choose a new reward scheme:", pady=10)
         msg.grid(row=0, columnspan=3)
         
-        # Button for expanding visual field editing grid
-        self.expand_button = Button(top, text="Expand grid",
-                                    command=self.grid_expand)
-        self.expand_button.grid(row=1, column=1)
+        self.variable = StringVar(top)
+        self.reward_scheme_list = ["None", 
+                              "Maximize Life",
+                              "Minimize Life",
+                              "Make shape"]
+        self.variable.set(self.reward_scheme_list[0])
+        
+        self.reward_scheme_menu = OptionMenu(top, self.variable, 
+                                             *self.reward_scheme_list)
+        self.reward_scheme_menu.grid(row=1, columnspan=3)
+        
+        # Buttons
+        ok_button = Button(top, text="Ok", command=self.execute)   
+        ok_button.bind("<Return>", self.execute)
+        ok_button.grid(row=3, column=0, sticky="e", pady=10)
+        
+        apply_button = Button(top, text="Apply", command=self.apply)
+        apply_button.bind("<Return>", self.apply)
+        apply_button.grid(row=3, column=1)
+        
+        cancel_button = Button(top, text="Cancel", command=self.cancel)
+        cancel_button.bind("<Return>", self.cancel)
+        cancel_button.grid(row=3, column=2, sticky="w")
+        
+        # Key bindings
+        self.top.bind("<Escape>", self.cancel)
+        self.top.bind("<Return>", self.execute)
+
+        
+    def apply(self, *args):
+        new_reward_scheme = self.variable.get()
+        print(new_reward_scheme)
+        if new_reward_scheme == "None":
+            self.schemetype = None
+        elif new_reward_scheme == "Maximize Life":
+            self.schemetype = "maximize"
+        elif new_reward_scheme == "Minimize Life":
+            self.schemetype = "minimize"
+        elif new_reward_scheme == "Make shape":
+            self.schemetype = "shape"
+            shape = np.copy(self.main_window.vis_field)
+            for i in range(len(shape)):
+                for j in range(len(shape[i])):
+                    if shape[i][j] == 2:
+                        shape[i][j] = 1
+            vf = np.copy(self.main_window.vis_field)
+            popup = GridEditorWindow(self.master, self.main_window, shape, "reward scheme shape", vf)
+            self.shape = popup.get_grid()
+            self.master.wait_window(popup.top)
+
+    def cancel(self, *args):
+        self.top.destroy()
+    
+    def execute(self, *args):
+        self.apply()
+        self.top.destroy()
+        
+    def get(self):
+        return self.schemetype, self.shape
+    
+
+class GridEditorWindow(Frame):
+    def __init__(self, master, main_window, input_grid, grid_type, limiter_grid=None):
+        self.master = master
+        self.main_window = main_window
+        self.grid = np.copy(input_grid)
+        self.grid_backup = np.copy(input_grid)
+        self.grid_type = grid_type
+        self.limiter_grid = limiter_grid
+        top = self.top = Toplevel(master)
+        self.top.title("{} Editor".format(self.grid_type.capitalize()))
+        self.scale = 20
+
+        msg = Label(top, text=" Edit the {} by\n"
+                    "clicking on the cells below".format(self.grid_type),
+                    pady=10)
+        msg.grid(row=0, columnspan=3)
+        
+        if self.grid_type == "visual field":
+            self.expand_button = Button(top, text="Expand grid",
+                                        command=self.grid_expand)
+            self.expand_button.grid(row=1, column=1)
         
         # Frame for holding visual field cells for editing
-        self.vf_frame = Frame(top)
+        self.click_frame = Frame(top)
         # Grid of clickable cells controlling visual field state
-        self.vf_grid = [[]]
+        self.clickable_grid = [[]]
         # Initialize visual field grid
         self.refresh_grid()
         
@@ -909,21 +1150,22 @@ class VisualFieldWindow(Frame):
         
     def apply(self, *args):
         # Trim the visual field and apply updates to main game window and agent
-        self.trim_visual_field()
-        self.main_window.vis_field = np.copy(self.vf)
-        self.vf_backup = np.copy(self.vf)
-        self.main_window.agent = Agent(self.main_window.data, 
-                           self.main_window.vis_field, 
-                           self.main_window.eye_location, 
-                           gamma=0.9)
-        self.main_window.agent.vision.update(self.main_window.data)
-        self.main_window.display_data()
-        self.main_window.display_agent_view()
+        if self.grid_type == "visual field":
+            self.trim()
+            self.main_window.vis_field = np.copy(self.grid)
+            self.main_window.agent = self.main_window.initialize_agent( \
+                                               self.main_window.data, 
+                                               self.main_window.vis_field, 
+                                               self.main_window.eye_location)
+            self.main_window.display_data()
+            self.main_window.display_agent_view()
+            
+        self.grid_backup = np.copy(self.grid)
     
     def cancel(self, *args):
         # Restore visual field to the way it was since opening editor or 
         #   since last clicking "Apply" and then close the editor
-        self.main_window.vis_field = np.copy(self.vf_backup)
+        self.grid = np.copy(self.grid_backup)
         self.top.destroy()
     
     def execute(self, *args):
@@ -931,50 +1173,79 @@ class VisualFieldWindow(Frame):
         self.top.destroy()
         
     def flip(self, row, col):
-        if self.vf[row][col] == 0:
-            self.vf[row][col] = 1
-        elif self.vf[row][col] == 1:
-            self.vf[row][col] = 0
-        r = self.render_cell_image(self.vf[row][col])
-        self.vf_grid[row][col].configure(image=r) 
-        self.vf_grid[row][col].image = r
-
+        if self.grid_type == "reward scheme shape":
+            # Only allow flipping a cell if it's within the visual field
+            if self.limiter_grid[row][col] == 0:
+                return
+            else:
+                if self.grid[row][col] == 0:
+                    self.grid[row][col] = 1
+                    render = self.render_cell_image(1)
+                elif self.grid[row][col] == 1:
+                    self.grid[row][col] = 0
+                    render = self.render_cell_image(2)
+                    
+        elif self.grid_type == "visual field":
+            if self.grid[row][col] == 0:
+                self.grid[row][col] = 1
+            elif self.grid[row][col] == 1:
+                self.grid[row][col] = 0
+            render = self.render_cell_image(self.grid[row][col])
+        
+        self.clickable_grid[row][col].configure(image=render) 
+        self.clickable_grid[row][col].image = render
+        
+    def get_grid(self):
+        return self.grid
+    
     def grid_expand(self, *args):
         # Expand the grid dimensions by one cell on each side
-        new_grid = np.zeros((len(self.vf)+2, len(self.vf[0])+2), dtype="uint8")
-        for i in range(len(self.vf)):
-            for j in range(len(self.vf[i])):
-                new_grid[i + 1][j + 1] = self.vf[i][j]
-        self.vf = np.copy(new_grid)
+        new_grid = np.zeros((len(self.grid)+2, len(self.grid[0])+2), dtype="uint8")
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[i])):
+                new_grid[i + 1][j + 1] = self.grid[i][j]
+        self.grid = np.copy(new_grid)
         self.refresh_grid()
         
     def refresh_grid(self):
-        for i in range(len(self.vf_grid)):
-            for j in range(len(self.vf_grid[i])):
-                self.vf_grid[i][j].destroy()
-        self.vf_frame.destroy()
-        self.vf_frame = Frame(self.top, borderwidth=4, 
+        # Destroy old grid first
+        for i in range(len(self.clickable_grid)):
+            for j in range(len(self.clickable_grid[i])):
+                self.clickable_grid[i][j].destroy()
+        self.click_frame.destroy()
+        # Create new clickable grid
+        self.click_frame = Frame(self.top, borderwidth=4, 
                               relief="ridge", 
                               bg="gray")
-        self.vf_frame.grid(row=2, columnspan=3, padx=20, pady=20)
-        self.vf_grid = [[] for row in self.vf]
-        for i in range(len(self.vf)):
-            for j in range(len(self.vf[i])):
-                render = self.render_cell_image(self.vf[i][j])
-                cell = Label(self.vf_frame, image=render, 
+        self.click_frame.grid(row=2, columnspan=3, padx=20, pady=20)
+        self.clickable_grid = [[] for row in self.grid]
+        # Create a clickable square image for each cell in the grid
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[i])):
+                
+                if self.grid_type == "reward scheme shape":
+                    # Reward scheme grid is constrained by the visual field
+                    if self.limiter_grid[i][j] == 0:
+                        render = self.render_cell_image(0)
+                    elif self.grid[i][j] == 0:
+                        render = self.render_cell_image(2)
+                    elif self.grid[i][j] == 1:
+                        render = self.render_cell_image(1)
+                        
+                elif self.grid_type == "visual field":
+                    render = self.render_cell_image(self.grid[i][j])
+                    
+                else:
+                    render = self.render_cell_image(0)
+                    
+                cell = Label(self.click_frame, image=render, 
                              borderwidth=1, bg="#EEEEEE")
-                self.vf_grid[i].append(cell)
-                self.vf_grid[i][j].image = render
-                self.vf_grid[i][j].grid(row=i, column=j)
-                self.vf_grid[i][j].bind("<Button-1>", lambda event, 
+                self.clickable_grid[i].append(cell)
+                self.clickable_grid[i][j].image = render
+                self.clickable_grid[i][j].grid(row=i, column=j)
+                self.clickable_grid[i][j].bind("<Button-1>", lambda event, 
                                         row=i, col=j: self.flip(row, col))
-        self.refresh_window_size()
-        
-    def refresh_window_size(self):
-        self.top.geometry("{width}x{height}".format( \
-                          width = int(1.1*len(self.vf[0])*self.scale+100),
-                          height = int(1.1*len(self.vf)*self.scale+220)))
-        
+
     def render_cell_image(self, cell):
         if cell == 0:
             colorweighted_data = 255
@@ -987,43 +1258,43 @@ class VisualFieldWindow(Frame):
         raw_img = Image.fromarray(scaled_data)
         render = ImageTk.PhotoImage(raw_img)
         return render
-    
-    def trim_visual_field(self):
+
+    def trim(self):
         # Trim any outermost rows or columns that have only zeros
-        trimmed_vf = np.copy(self.vf)
+        trimmed_grid = np.copy(self.grid)
         # Top rows
         all_zeros = True
         while(all_zeros):
-            for i in trimmed_vf[0]:
+            for i in trimmed_grid[0]:
                 if i == 1 or i == 2:
                     all_zeros = False
             if all_zeros:
-                trimmed_vf = np.copy(trimmed_vf[1:])  
+                trimmed_grid = np.copy(trimmed_grid[1:])
         # Bottom rows
         all_zeros = True
         while(all_zeros):
-            for i in trimmed_vf[-1]:
+            for i in trimmed_grid[-1]:
                 if i == 1 or i == 2:
                     all_zeros = False
             if all_zeros:
-                trimmed_vf = np.copy(trimmed_vf[:-1])  
+                trimmed_grid = np.copy(trimmed_grid[:-1]) 
         # Left columns        
         all_zeros = True
         while(all_zeros):
-            for i in trimmed_vf:
+            for i in trimmed_grid:
                 if i[0] == 1 or i[0] == 2:
                     all_zeros = False
             if all_zeros:
-                trimmed_vf = np.copy(trimmed_vf[:, 1:])
+                trimmed_grid = np.copy(trimmed_grid[:, 1:])
         # Right columns        
         all_zeros = True
         while(all_zeros):
-            for i in trimmed_vf:
+            for i in trimmed_grid:
                 if i[-1] == 1 or i[-1] == 2:
                     all_zeros = False
             if all_zeros:
-                trimmed_vf = np.copy(trimmed_vf[:, :-1])
-        self.vf = np.copy(trimmed_vf)
+                trimmed_grid = np.copy(trimmed_grid[:, :-1])
+        self.grid = np.copy(trimmed_grid)
         self.refresh_grid()
         
     
