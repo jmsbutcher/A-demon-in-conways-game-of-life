@@ -63,7 +63,11 @@ class Agent():
         self.last_reward = reward
         return action
     
-    def save(self, name=""):
+    def save(self, file=""):
+        torch.save({"state_dict": self.brain.state_dict(),
+                    "optimizer": self.optimizer.state_dict(),
+                    }, file)       # "Saved_brains/{}.pth".format(name))
+        """
         if name == "":
             torch.save({"state_dict": self.brain.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
@@ -76,8 +80,13 @@ class Agent():
                     }, name)       # "Saved_brains/{}.pth".format(name))
             print("Brain saved as {}".format(str(name)))
             return
+        """
     
     def load(self, name):
+        checkpoint = torch.load(name)
+        self.brain.load_state_dict(checkpoint["state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
+        """
         if os.path.isfile(name):
             checkpoint = torch.load(name)
             self.brain.load_state_dict(checkpoint["state_dict"])
@@ -87,7 +96,7 @@ class Agent():
         else:
             print("Cancelled loading brain.")
             return
-    
+        """
     
 class Brain(nn.Module):
     def __init__(self, vision_size):
@@ -107,7 +116,7 @@ class Brain(nn.Module):
 class RewardScheme:
     def __init__(self, vf,
                        vision,
-                       schemetype, 
+                       schemetype=None, 
                        shape_name=None,
                        desired_shape=None):
         # The agent's visual field; numpy array of rank 2
@@ -124,6 +133,8 @@ class RewardScheme:
         #  - "minimize": get higher reward based on number of dead cells
         #      in the visual field
         self.schemetype = schemetype
+        self.shape_name = shape_name
+        self.desired_shape = desired_shape
         self.exact_match = False
         self.reward = 0
         if schemetype == "shape":
@@ -137,7 +148,6 @@ class RewardScheme:
             #                                                  [1, 1, 1]]))
             # (Hint: it might be better to make a 5x5 grid instead, with "1"s
             #   all around to keep the flipper isolated)
-            self.desired_shape = desired_shape
             if desired_shape is not None:
                 print("Reward scheme: shape")
                 print("-Make the following shape:")
@@ -170,6 +180,7 @@ class RewardScheme:
     def get_reward(self):
         if self.schemetype == "shape":
             view = self.vision.get_view()
+            print(view)
             # Check that the view has the same dimensions as the visual field
             if self.vf.shape != view.shape:
                 print("ERROR: Reward shape doesn't match visual field shape")
@@ -206,13 +217,14 @@ class RewardScheme:
             
         else:
             reward = 0
-            
         return reward
             
     def get_reward_text(self):
         if self.schemetype == "shape":
-            return "Match view\n\n"\
-                   "Try to get this shape\nin the visual field:"
+            text = "Produce shape:\n"
+            if self.shape_name:
+                text += "\"" + self.shape_name + "\""
+            return text
         elif self.schemetype == "maximize":
             return "Maximize life in\n" \
                     "the visual field."
@@ -225,12 +237,14 @@ class RewardScheme:
     def get_shape(self):
         return self.desired_shape
     
+    def get_shapename(self):
+        return self.shape_name
+    
     def get_antishape(self):
         return abs(self.desired_shape - 1)
     
     def set_schemetype(self, new_schemetype):
         self.schemetype = new_schemetype
-        print("New reward scheme:")
         if self.schemetype is None:
             self.shape_name = None
             self.desired_shape = None
@@ -238,6 +252,8 @@ class RewardScheme:
     def set_shape(self, new_desired_shape, new_shapename=None):
         self.schemetype = "shape"
         self.desired_shape = new_desired_shape
+        self.shape_name = new_shapename
+        #print("New shape:\n", new_desired_shape, "New shape name:", new_shapename)
             
             
 class ReplayMemory(object):
@@ -316,11 +332,14 @@ class Vision:
             for j in range(len(vf[i])):
                 x = i + eye_x - loc_eye_x
                 y = j + eye_y - loc_eye_y
-                if vf[i][j] > 0: # If within visual field
-                    if 0 <= x < len(e) and 0 <= y < len(e[0]): # If in bounds
+                # If within visual field...
+                if vf[i][j] > 0: 
+                    # If within bounds of the environment grid...
+                    if 0 <= x < len(e) and 0 <= y < len(e[0]): 
                         view[i][j] = e[x][y]
                         viewdata.append(e[x][y])
-                    else: # If within visual field but out of bounds
+                    # If within visual field but out of bounds
+                    else: 
                         view[i][j] = None
                         viewdata.append(None)
                 else:
