@@ -1,12 +1,11 @@
 """
- The AI agent that lives in the Conway's Game of Life game environment, 
+ The AI agent that lives in the Conway's Game of Life game environment,
  "game.py"
 
 """
 
 import numpy as np
 import random
-import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,296 +13,411 @@ import torch.optim as optim
 
 
 class Agent():
-    def __init__(self, env_data, vf, abs_eye_loc, vision_size, gamma):
+    def __init__(self, env_data, vf, abs_eye_loc, gamma):
+        # Agent's vision -- for retrieving visual information from the
+        #   environment and controlling movement around the environment
         self.vision = Vision(env_data, vf, abs_eye_loc)
+        vision_size = int(vf.sum() - 1)
+
+        # Agent's brain -- neural network for learning how to maximize reward
         self.brain = Brain(vision_size)
+        # Discount factor: a number between 0 and 1
         self.gamma = gamma
-        self.memory = ReplayMemory(100000) # For experience replay 9-27-19
-        self.optimizer = optim.Adam(self.brain.parameters(), lr = 0.01)
-        self.last_state = torch.Tensor(vision_size).unsqueeze(0) # Added unsqueeze 9-27-19
+        # Pytorch Adam Optimizer, learning rate of 0.01
+        self.optimizer = optim.Adam(self.brain.parameters(), lr=0.01)
+
+        # Agent's memory -- for batch learning
+        self.memory = ReplayMemory(100000)
+
+        self.last_state = torch.Tensor(vision_size).unsqueeze(0)
         self.last_action = 0
         self.last_reward = 0
-        
-    def select_action(self, state):
-        #print("Q-values:", self.brain(state))               # For debugging
-        probabilities = F.softmax(self.brain(state), dim=1)
-        #print("Action Probabilities: ", probabilities)      # For debugging
-        action = probabilities.multinomial(num_samples=1)
-        return action.data[0]
-    
+
     def learn(self, batch_state, batch_next_state, batch_action, batch_reward):
-        outputs = self.brain(batch_state).gather(1, 
-            batch_action.unsqueeze(1)).squeeze(1)
+        # TD learning procedure, using batches of 100
+
+        # Get the value of the current state
+        outputs = self.brain(batch_state).gather(1,
+                                                 batch_action.unsqueeze(1)
+                                                 ).squeeze(1)
+
+        # Get the max expected value of the next state
         next_outputs = self.brain(batch_next_state).detach().max(1)[0]
+
+        # Target is the discount factor times the expected future value plus
+        #   the reward
         target = self.gamma * next_outputs + batch_reward
+
+        # TD loss is the difference between the target and what we actually get
         td_loss = F.smooth_l1_loss(outputs, target)
+
+        # Adjust the weights in the agent's brain
         self.optimizer.zero_grad()
         td_loss.backward()
         self.optimizer.step()
-    
+
+    def load(self, file):
+        # Load a saved brain state using Pytorch load function
+        checkpoint = torch.load(file)
+        self.brain.load_state_dict(checkpoint["state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
+
+    def save(self, file):
+        # Save the brain state to a file using Pytorch save function
+        torch.save({"state_dict": self.brain.state_dict(),
+                    "optimizer": self.optimizer.state_dict(),
+                    }, file)
+
+    def select_action(self, state):
+        # The Pytorch Softmax function normalizes the q-values into a
+        #   probability distribution, and then one of these is chosen
+        #   as the action to take. The distribution aims to balance
+        #   exploration vs. exploitation.
+        probabilities = F.softmax(self.brain(state), dim=1)
+
+        # Sometimes we encounter a probability distribution < 0, which
+        #   causes the program to crash. The cause is unknown.
+        #   This is a workaround:
+        for p in probabilities[0]:
+            if p <= 0.0:
+                print("Warning: Encountered Q-value less than 0")
+                return 0
+
+        # Select an action code (0 - 5) for one of six actions
+        action = probabilities.multinomial(num_samples=1)
+
+        return action.data[0]
+
     def update(self, reward, new_view):
+        # Convert the agent's input view into a Pytorch Tensor
         new_state = torch.Tensor(new_view).float().unsqueeze(0)
+
+        # Add last state, new state, action, and reward to memory
         self.memory.push((self.last_state,
                           new_state,
                           torch.LongTensor([int(self.last_action)]),
                           torch.Tensor([self.last_reward])))
+
+        # Select action
         action = self.select_action(new_state)
+
+        # Once the agent's memory reaches 100 samples, begin learning
         if len(self.memory.memory) > 100:
+            # Get random batch of 100 states, new states, actions, & rewards
             batch_state, batch_next_state, batch_action, batch_reward = \
                 self.memory.sample(100)
-            self.learn(batch_state, batch_next_state, batch_action, 
-                       batch_reward)        
+            self.learn(batch_state, batch_next_state, batch_action,
+                       batch_reward)
+
         self.last_action = action
         self.last_state = new_state
         self.last_reward = reward
+
         return action
-    
-    def save(self):
-        torch.save({"state_dict": self.brain.state_dict(),
-                    "optimizer": self.optimizer.state_dict(),
-                    }, "last_brain.pth")
-    
-    def load(self):
-        if os.path.isfile('last_brain.pth'):
-            checkpoint = torch.load('last_brain.pth')
-            self.brain.load_state_dict(checkpoint['state_dict'])
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
-            print("done !")
-        else:
-            print("no saved brain found...")
-    
-    
+
+
 class Brain(nn.Module):
+    # The agent's brain model -- I will make this customizable in the future.
+    #
+    #   - Input layer has as many states as there are cells in the visual field
+    #   - Output layer has six states, one for each possible action:
+    #     Up, Down, Left, Right, Flip, and Wait
+    #
     def __init__(self, vision_size):
         super(Brain, self).__init__()
-        self.vision_size = vision_size  # Number of input states
-        self.fc1 = nn.Linear(self.vision_size, 50)
-        self.fc2 = nn.Linear(50, 50)
-        self.fc3 = nn.Linear(50, 6)     # 6 possible actions
-        
+        self.fc1 = nn.Linear(vision_size, 50)   # 1st fully connected layer
+        self.fc2 = nn.Linear(50, 50)            # 2nd fully connected layer
+        self.fc3 = nn.Linear(50, 6)             # 6 output states
+
     def forward(self, view):
+        # Rectifier function
         view = F.relu(self.fc1(view))
         view = F.relu(self.fc2(view))
         q_values = self.fc3(view)
         return q_values
-            
-    
-class ReplayMemory(object):
+
+
+class RewardScheme:
+    # Handles the reward mechanism for the agent
+    #   - Calculates the reward based on the agent's current view according to
+    #     the scheme criteria (maximize live cells, make a shape of cells, etc)
+    def __init__(self, vf,
+                       vision,
+                       schemetype=None,
+                       shape_name=None,
+                       desired_shape=None):
+        # The agent's visual field
+        self.vf = vf
+
+        # The agent's vision object for retrieving visual data
+        self.vision = vision
+
+        # Scheme types:
+        #  - "shape": get high reward for having the desired shape
+        #      in the visual field.
+        #  - "maximize": get higher reward based on number of live cells
+        #      in the visual field.
+        #  - "minimize": get higher reward based on number of dead cells
+        #      in the visual field
+        self.schemetype = schemetype
+
+        # The desired shape, if using "shape" scheme type -- representing the
+        #   desired shape of live/dead cells in the agent's visual field.
+        #   - 0 -- Live cell
+        #   - 1 -- Dead cell
+        # Example: If you want the agent to make flippers, do this:
+        #   flipper_scheme = RewardScheme(...,
+        #                                 desired_shape=np.array([[1, 1, 1],
+        #                                                         [0, 0, 0],
+        #                                                         [1, 1, 1]]))
+        # (Hint: it might be better to make a 5x5 array instead, with 1s
+        #   all around to keep the flipper isolated so it works correctly.)
+        #
+        # *** Note: A "shape" reward scheme will only work in the game
+        #   if it is the same exact dimensions as the visual field. For the
+        #   above example to work, the visual field must by a 3x3 array.
+        self.desired_shape = desired_shape
+
+        # Optional name for the desired shape, if using "shape" scheme type
+        self.shape_name = shape_name
+
+        # Variable to signal that an exact match has been found, if using
+        #   "shape" scheme type
+        self.exact_match = False
+
+        # Print message upon creating a new RewardScheme
+        if schemetype == "shape":
+            if desired_shape is not None:
+                print("Reward scheme: shape")
+                print("-Make the following shape:")
+                if shape_name is not None:
+                    print(shape_name)
+                for i in range(len(desired_shape)):
+                    for j in range(len(desired_shape[i])):
+                        if desired_shape[i][j] == 0:
+                            print(" #", end="")
+                        else:
+                            print("  ", end="")
+                    print()
+            else:
+                print("Must provide a desired shape for 'shape' reward scheme")
+        elif schemetype == "maximize":
+            print("Reward scheme: maximize")
+            print("-Maximize live cells")
+        elif schemetype == "minimize":
+            print("Reward scheme: minimize")
+            print("-Minimize live cells")
+        elif schemetype is None:
+            print("No reward scheme\n"
+                  "Create new reward scheme by clicking"
+                  "'New' --> 'Reward Scheme'")
+        else:
+            print("ERROR: Must provide a reward scheme type.")
+
+    def check_for_exact_match(self):
+        return self.exact_match
+
+    def get_reward(self):
+        # Calulate and return the reward based on what the agent currently
+        #   sees according to the scheme criteria below:
+        #
+        if self.schemetype == "shape":
+            # Get higher reward for each cell in agent's view that matches
+            #   the corresponding cell in desired shape.
+            # If ALL the cells match, then get maximum reward of 10 and
+            #   set self.exact_match variable to True
+            view = self.vision.get_view()
+
+            # Check that the view has the same dimensions as the visual field
+            if self.vf.shape != view.shape:
+                print("ERROR: Reward shape doesn't match visual field shape")
+                return
+
+            r = 1
+            self.exact_match = True
+            for i in range(len(view)):
+                for j in range(len(view[i])):
+                    # If within the visual field:
+                    if self.vf[i][j] > 0:
+                        # Check whether view point value matches the shape
+                        if view[i][j] == self.desired_shape[i][j]:
+                            r += 0.1
+                        else:
+                            r -= 0.1
+                            self.exact_match = False
+            reward = r
+            if self.exact_match:
+                reward = 10
+
+        elif self.schemetype == "maximize":
+            # Get higher reward for each live cell in the agent's current view
+            viewdata = self.vision.get_viewdata()
+            r = 0
+            for cell in viewdata:
+                if cell == 0:
+                    r += 1
+            # Scale reward according to size of the visual field
+            reward = int(r / len(viewdata) * 20)
+
+        elif self.schemetype == "minimize":
+            # Get lower reward for each live cell in the agent's current view
+            viewdata = self.vision.get_viewdata()
+            r = 20
+            for cell in viewdata:
+                if cell == 0 and r > 0:
+                    r -= 1
+            # Scale reward according to size of the visual field
+            reward = int(r / len(viewdata) * 20)
+
+        else:
+            reward = 0
+
+        return reward
+
+    def get_reward_text(self):
+        # Generate schemetype-specific text to display in the display console
+        if self.schemetype == "shape":
+            text = "Produce shape:\n"
+            if self.shape_name:
+                text += "\"" + self.shape_name + "\""
+            return text
+        elif self.schemetype == "maximize":
+            return "Maximize life in\n" \
+                    "the visual field."
+        elif self.schemetype == "minimize":
+            return "Minimize life in\n" \
+                   "the visual field."
+        elif self.schemetype is None:
+            return "No reward scheme"
+        else:
+            return "Other"
+
+    def get_shape(self):
+        return self.desired_shape
+
+    def get_shapename(self):
+        return self.shape_name
+
+    def get_antishape(self):
+        # Return desired shape with all "1"s turned to "0"s and vice versa
+        return abs(self.desired_shape - 1)
+
+    def set_schemetype(self, new_schemetype):
+        self.schemetype = new_schemetype
+        if self.schemetype != "shape":
+            self.shape_name = None
+            self.desired_shape = None
+
+    def set_shape(self, new_desired_shape, new_shapename=None):
+        self.schemetype = "shape"
+        self.desired_shape = new_desired_shape
+        self.shape_name = new_shapename
+
+
+class ReplayMemory():
+    # Agent's memory used for batch learning
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
-        
+
     def push(self, event):
+        # An event consists of: (state, next state, action, reward)
         self.memory.append(event)
+
+        # Start deleting the oldest event once memory reaches capacity
         if len(self.memory) > self.capacity:
             del self.memory[0]
-            
+
+    # Return a random batch of states, next states, actions and rewards
     def sample(self, batch_size):
         samples = zip(*random.sample(self.memory, batch_size))
         return map(lambda x: torch.cat(x, 0), samples)
-    
-    
-class Vision:
-    def __init__(self, env_data, vf, abs_eye_loc):
-        # Game environment data of cell states; numpy array of rank 2
-        self.environment_data = env_data
-        
-        # Shape of the agent's field of view; numpy array of rank 2
-        self.visual_field = vf
-        
-        # Coordinates of the agent's eye in the environment grid; 
-        # rank 1 numpy array of size 2
-        self.absolute_eye_location = abs_eye_loc
-        
-        # List of coordinates of visual field points relative to  
-        # the eye location; list of rank 1 numpy arrays of size 2
-        self.relative_visual_field_points = self.get_visual_field_points( \
-                                                self.visual_field)[0]
-        
-        # Coordinates of the agent's eye in the visual field; 
-        # rank 1 numpy array of size 2
-        self.relative_eye_location = self.get_visual_field_points( \
-                                                self.visual_field)[1]
-        
-        # List of coordinates of visual field points in 
-        # the environment grid; list of tuples of size 2
-        self.absolute_visual_field_points = \
-                        self.get_absolute_visual_field_points( \
-                                    self.relative_visual_field_points, 
-                                    self.absolute_eye_location)  
-                        
-        # List of values representing the cell states in the visual field;
-        # "0" for alive, "1" for dead, "None" for out of bounds
-        self.viewdata = self.get_environment_data_points_in_visual_field( \
-                                    self.environment_data, 
-                                    self.absolute_visual_field_points)
-        
-        # Representation of the agent's view of the cell states in 
-        # its visual field; numpy array of rank 2
-        self.view = self.get_view()
-        
-    def get_visual_field_points(self, vf):
-        # Take in a rank 2 numpy array with:
-        #  - "0"s marking cells not in the visual field
-        #  - "1"s marking cells in the visual field
-        #  - A single "2" marking the agent's eye location
-        # Return two things:
-        #  - A list of rank 1 numpy arrays of size 2 holding coordinates of  
-        #    all the "1"s relative to the eye location
-        #  - A numpy array of size 2 holding coordinates of 
-        #    the agent's eye location
-        # Example: (all sequences below are numpy arrays)
-        #       vf:                    vf_points:                    eye_loc:
-        #  [[0, 1, 0],  
-        #   [1, 2, 1],  -->  [(0, 1), (1, 0), (1, 2), (2, 1)]   ,     (1, 1)
-        #   [0, 1, 0]]
-        vf_points = []
-        eye_loc = np.array((0, 0))
-        for i in range(vf.shape[0]):
-            for j in range(vf.shape[1]):
-                if vf[i][j] == 1 or vf[i][j] == 2:
-                    vf_points.append(np.array((i, j)))
-                if vf[i][j] == 2:
-                    eye_loc = np.array((i, j))
-        # Turn list of visual field points into points relative to eye location
-        # Example:
-        #           vf_points:                         rel_vf_points:   
-        #  [(0, 1), (1, 0), (1, 2), ...] --> [(-1, 0), (0, -1), (0, 1), ...]
-        rel_vf_points = []
-        for point in vf_points:
-            rel_point = point - eye_loc
-            rel_vf_points.append(rel_point)
-        return rel_vf_points, eye_loc
 
-    def get_absolute_visual_field_points(self, rel_vf_points, abs_eye_loc):
-        # Take numpy array of visual field coordinates relative to the
-        # agent's eye location in its visual field, and change it to a numpy 
-        # array of absolute coordinates relative to the (0, 0) point in the 
-        # environment.
-        # Example:
-        # eye location in environment: (4, 4)
-        #           rel_vf_points:                       abs_vf_points:
-        # [(-1, 0), (0, -1), (0, 1), ...]  -->  [(3, 4), (4, 3), (4, 5), ...]
-        absolute_vis_field_points = []
-        for point in rel_vf_points:
-            absolute_vis_field_points.append(abs_eye_loc + point)
-        return absolute_vis_field_points
-    
-    def get_environment_data_points_in_visual_field(self, data, abs_vf_points):
-        # Take the absolute visual field coordinates of all the points in
-        # the agent's field of view and return a list of the environment 
-        # values in that field of view. If any visual field coordinates are off
-        # the edge of the environment window, add <None> to this list.
-        # Example:
-        # agent location: (4, 4)
-        #           abs_vf_points:                       view_data:
-        # [(3, 4), (4, 4), (4, 5), ...]  -->  [0, 1, 1, 0, None, None, 1, ... ]
-        view_data = []
-        for point in abs_vf_points:
-            if  point[0] < 0 or point[0] >= len(data) or \
-                point[1] < 0 or point[1] >= len(data[0]):
-                view_data.append(None)
-            else:
-                view_data.append(data[point[0]][point[1]])
-        return view_data
-    
+
+class Vision:
+    # Handle what the agent sees
+    #   - Use information from the environment, where the agent's eye is
+    #     located, and the shape of the visual field to create a representation
+    #     of the agent's current view
+    #   - Move the agent's eye location
+    def __init__(self, env_data, vf, eye_loc):
+        # Game environment data of cell states
+        self.environment_data = env_data
+        # Shape of the agent's field of view
+        self.visual_field = vf
+        # Coordinates of the agent's eye in the environment grid
+        self.eye_location = eye_loc
+        # Data about what the agent currently sees; see update_view() for more
+        self.view = np.ones(vf.shape)
+        self.viewdata = []
+
     def get_view(self):
-        # Turn list of 0s and 1s in viewdata into a numpy array of 0s and 1s in
-        # the shape of the visual field
-        # This 2D array will be used to make a view of what the agent
-        # sees and display it in the display console.
-        vf = self.visual_field
-        view = np.ones(vf.shape, dtype="float")   
-        d = self.viewdata
-        index = 0
-        
-        for i in range(len(vf)):
-            for j in range(len(vf[0])):
-                if vf[i][j] == 0:
-                    view[i][j] = 1   # White - Outside the visual field. 
-                elif vf[i][j] == 1:
-                    if d[index] == 0:
-                        view[i][j] = 0   # Black - Live cell in visual field
-                    elif d[index] == 1:
-                        view[i][j] = 0.8   # Gray - Dead cell in visual field
-                    index += 1
-                else: 
-                    view[i][j] = self.environment_data[self.absolute_eye_location[0], self.absolute_eye_location[1]]
-                    index += 1
-        return view
-    
-    def move(self, x_shift, y_shift):
-        self.absolute_eye_location[0] += x_shift
-        self.absolute_eye_location[1] += y_shift
-    
-    def update_view(self):
-        # Update what the agent sees: the state of the cells in its 
-        # visual field, which depends on its location and the environment data
-        self.absolute_visual_field_points = \
-            self.get_absolute_visual_field_points( \
-                self.relative_visual_field_points, self.absolute_eye_location)
-        self.viewdata = self.get_environment_data_points_in_visual_field( \
-                self.environment_data, self.absolute_visual_field_points)
+        return self.view
+
+    def get_viewdata(self):
         return self.viewdata
-        
-    def print_visual_field(self):
-        # Print the shape of the visual field to the terminal using symbols
-        print("Visual field: ")
-        for row in self.visual_field:
-            for item in row:
-                if item == 1:
-                    print("*", end=" ")
-                elif item == 2:
-                    print("@", end=" ")
-                else:
-                    print(" ", end=" ")
-            print()
-            
-    def print_agent_view(self):
-        # Print what the agent currently sees in its visual field
-        # to the terminal using symbols
-        print("Agent view: ")
+
+    def move(self, x_shift, y_shift):
+        self.eye_location[0] += x_shift
+        self.eye_location[1] += y_shift
+
+    def update(self, data):
+        self.environment_data = data
+        self.update_view()
+
+    def update_view(self):
+        # Update the agent's view and its simplified form, viewdata
+        #
+        # A view point can be one of three values:
+        #   - None -- if the point is not part of the visual field
+        #   - 0 -- if the point is a live cell within the visual field
+        #   - 1 -- if the point is a dead cell within the visual field
+        #
+        # Viewdata is a simple list of the values in view that are within the
+        #   visual field. Any of those points that are off the edge of the
+        #   environment grid will be denoted as None.
+        # The size and shape for both view and viewdata are always the same
+        #   for any given visual field template.
+        #
+        #  - Example of view:                    ... using this visual field:
+        # np.array([[None, None,   1, None, None],  np.array([[0, 0, 1, 0, 0],
+        #           [None,    0,   1,    1, None],            [0, 1, 1, 1, 0],
+        #           [   1,    1,   0,    0,    0],    <--     [1, 1, 2, 1, 1],
+        #           [None,    0,   1,    0, None],            [0, 1, 1, 1, 0],
+        #           [None, None,   1, None, None]])           [0, 0, 1, 0, 0]])
+        #
+        #  - Example of corresponding viewdata:
+        #   [1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1]
+
+        e = self.environment_data
+        eye_x, eye_y = self.eye_location
         vf = self.visual_field
-        env_view_points = self.viewdata
-        index = 0
+        view = np.ones(vf.shape)
+        viewdata = []
+
+        # Find local eye location in visual field
         for i in range(len(vf)):
-            for j in range(len(vf[0])):
-                if vf[i][j] == 0:
-                    print(" ", end=" ")
-                elif vf[i][j] == 1:
-                    d = env_view_points[index]
-                    if d == 1:
-                        print("-", end=" ")
-                    elif d == 0:
-                        print("#", end=" ")
+            for j in range(len(vf[i])):
+                if vf[i][j] == 2:
+                    loc_eye_x, loc_eye_y = i, j
+
+        # Get environment data within the visual field
+        for i in range(len(vf)):
+            for j in range(len(vf[i])):
+                # Calculate absolute coordinates in the environment grid
+                x = i + eye_x - loc_eye_x
+                y = j + eye_y - loc_eye_y
+                # If within visual field:
+                if vf[i][j] > 0:
+                    # If within bounds of the environment grid:
+                    if 0 <= x < len(e) and 0 <= y < len(e[0]):
+                        view[i][j] = e[x][y]
+                        viewdata.append(e[x][y])
+                    # If within visual field but out of bounds:
                     else:
-                        print(" ", end=" ")
-                    index += 1
-                elif vf[i][j] == 2:
-                    print("@", end=" ")
-            print()
-            
-    def print_full_evironment_view(self):
-        # Print entire environment with:
-        #   - "0" representing live cells,
-        #   - "1" representing dead cells,
-        #   - Brackets "[ ]" surrounding cells in the agent's visual field, and
-        #   - Angle brackets "< >" surrounding the cell at the eye location
-        data = self.environment_data
-        abs_vf_points = self.get_absolute_visual_field_points( \
-            self.get_visual_field_points(self.visual_field)[0], 
-                                         self.absolute_eye_location)
-        abs_eye_loc = self.absolute_eye_location        
-        print("Full environment view: ")
-        coordinates = []
-        for p in abs_vf_points:
-            coordinates.append(list(p))
-        for i in range(len(data)):
-            for j in range(len(data[0])):
-                if abs_eye_loc[0] == i and abs_eye_loc[1] == j:
-                    print("<{}>".format(data[i][j]), end="")
-                elif [i, j] in coordinates:
-                    print("[{}]".format(data[i][j]), end="")
+                        view[i][j] = None
+                        viewdata.append(None)
                 else:
-                    print("", data[i][j], end=" ")
-            print()    
+                    view[i][j] = None
+        self.view = view
+        self.viewdata = viewdata
