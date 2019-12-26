@@ -2,6 +2,26 @@
  The AI agent that lives in the Conway's Game of Life game environment,
  "game.py"
 
+ Demon version: 1.0
+ Date: 12-26-19
+
+ - Neural network and reinforcement learning mechanism based off module 1 of
+   Udemy course "Artificial Intelligence A-Z: Learn How To Build An AI"
+   by Hadelin de Ponteves, Kirill Eremenko, SuperDataScience Team
+   https://www.udemy.com/course/artificial-intelligence-az/
+
+
+ "A Demon in Conway's Game of Life"
+ by James Butcher
+ Github: https://github.com/jmsbutcher/A-demon-in-conways-game-of-life
+ First created: 8-31-19
+
+ Current version: 1.0
+ Date: 12-26-19
+
+ Python version 3.7.3
+ Pytorch version 1.2.0
+
 """
 
 import numpy as np

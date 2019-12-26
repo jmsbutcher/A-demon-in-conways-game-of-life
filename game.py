@@ -4,7 +4,7 @@
  Github: https://github.com/jmsbutcher/A-demon-in-conways-game-of-life
  First created: 8-31-19
 
- Current version: 0.7
+ Current version: 1.0
  Date: 12-26-19
 
  Python version 3.7.3
