@@ -5,7 +5,7 @@
 Life's evolution has run without interference... until now.
 
 An intelligent agent lives within the game, moving around
-and turning cells on or off --- causing chaos, or, perhaps,
+and turning cells on or off --- causing chaos, or perhaps
 some order!
 
 The agent has a "brain," a neural network that learns via
