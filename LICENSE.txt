@@ -1,0 +1,5 @@
+Copyright (c) 2019 James M. Butcher
+
+Permission is hereby granted to download, use, and modify this software for
+personal use. Please contact jmsbutcher1576@gmail.com for permission to use
+this software for commercial or any other purpose.
