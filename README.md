@@ -2,11 +2,12 @@
 
 An intelligent agent learns to interact with the cells in Conway's Game of Life
 
-# Prerequisites:
+## Prerequisites:
 <ul>
   <li>Python 3.7</li>
   <li>Numpy 1.17</li>
   <li>Pytorch 1.2.0</li>
+</ul>
 
 # Setup:
 1. Make sure the above requirements have been installed
