@@ -1,6 +1,6 @@
 # A Demon in Conway's Game of life
 
-###Conway's Game of Life with a twist!
+### Conway's Game of Life with a twist!
 
 Life's evolution has run without interference... until now.
 
