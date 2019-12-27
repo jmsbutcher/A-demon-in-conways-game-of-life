@@ -1,6 +1,13 @@
-# A-demon-in-Conway's-game-of-life
+# A Demon in Conway's Game of life
 
-An intelligent agent learns to interact with the cells in Conway's Game of Life
+###Conway's Game of Life with a twist!
+
+Life's evolution has run without interference... until now.
+
+An intelligent agent lives within the game, moving around
+and turning cells on or off --- causing chaos, or, perhaps,
+order!
+
 
 ## Prerequisites:
 <ul>
