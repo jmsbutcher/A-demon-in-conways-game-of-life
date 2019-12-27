@@ -6,7 +6,13 @@ Life's evolution has run without interference... until now.
 
 An intelligent agent lives within the game, moving around
 and turning cells on or off --- causing chaos, or, perhaps,
-order!
+some order!
+
+The agent has a "brain," a neural network that learns via
+reinforcement learning. It "sees" the state of cells in the
+environment within its visual field. This information is
+fed as input into the neural net, which then outputs an action
+to take: move, flip, or wait.
 
 
 ## Prerequisites:
