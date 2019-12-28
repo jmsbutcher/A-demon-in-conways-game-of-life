@@ -1,6 +1,6 @@
 # A Demon in Conway's Game of Life
 
-### Conway's Game of Life as an Environment for an Artificial Intelligence
+### Conway's Game of Life as an Environment for Artificial Intelligence
 
 Life's evolution has run without interference... until now.
 
