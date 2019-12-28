@@ -18,10 +18,12 @@ Depending on the reward scheme you choose, the agent learns to
 accomplish different things: maximize life, minimize life, or
 create definite shapes.
 
+#### Purpose
 As of right now, this project is meant for experimenting and playing
 around with how Conway's Game of Life works with or without
 interference
 
+#### Mission
 The next stage of development for this project will be to make
 the AI system customizeable. Experiment with different parameters
 for the neural network (more layers, less neurons per layer, convolutional
