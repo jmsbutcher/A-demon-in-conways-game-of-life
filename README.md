@@ -1,6 +1,6 @@
 # A Demon in Conway's Game of Life
 
-### Conway's Game of Life as an Environment for Artificial Intelligence
+## Conway's Game of Life as an Environment for Artificial Intelligence
 
 Life's evolution has run without interference... until now.
 
@@ -39,7 +39,7 @@ and testing AI systems.
   <li>Pytorch 1.2.0</li>
 </ul>
 
-# Setup:
+## Setup:
 1. Make sure the above requirements have been installed
 2. Clone or download this repository
 3. Using the terminal, navigate into the folder containing this repository
