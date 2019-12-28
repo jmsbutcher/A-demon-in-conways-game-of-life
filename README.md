@@ -1,18 +1,33 @@
-# A Demon in Conway's Game of life
+# A Demon in Conway's Game of Life
 
 ### Conway's Game of Life as an Environment for an Artificial Intelligence
 
 Life's evolution has run without interference... until now.
 
 An intelligent agent lives within the game, moving around
-and turning cells on or off --- causing chaos, or perhaps
+and flipping cells --- causing chaos, or perhaps
 some order!
 
 The agent has a "brain," a neural network that learns via
 reinforcement learning. It "sees" the state of cells in the
 environment within its visual field. This information is
-fed as input into the neural net, which then outputs an action
-to take: move, flip, or wait.
+fed as input into the neural net, which then outputs an action: 
+move, flip, or wait.
+
+Depending on the reward scheme you choose, the agent learns to
+accomplish different things: maximize life, minimize life, or
+create definite shapes.
+
+As of right now, this project is meant for experimenting and playing
+around with how Conway's Game of Life works with or without
+interference
+
+The next stage of development for this project will be to make
+the AI system customizeable. Experiment with different parameters
+for the neural network (more layers, less neurons per layer, convolutional
+instead of linear, and so on) and see how it affects the agent's behavior.
+The goal for this project is to become a sort of studio for developing 
+and testing AI systems.
 
 
 ## Prerequisites:
