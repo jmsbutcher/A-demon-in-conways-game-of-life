@@ -1,6 +1,6 @@
 # A Demon in Conway's Game of Life
 
-## Conway's Game of Life as an Environment for Artificial Intelligence
+## Conway's Game of Life as GUI-based Environment for Artificial Intelligence
 
 Life's evolution has run without interference... until now.
 
@@ -51,3 +51,13 @@ python game.py
 - If you are using Windows 10, you may need to download Anaconda and use
 **Anaconda Prompt** instead of **Command Prompt** to install Pytorch and
 also to run the above command.
+
+
+# Usage:
+
+### The GUI Interface
+Once you run the command `python game.py`, this GUI should pop up:
+<>
+
+
+### Original, Demon-Free Conway's Game of Life
