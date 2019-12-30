@@ -21,6 +21,7 @@
 
  Python version 3.7.3
  Pytorch version 1.2.0
+ Numpy version 1.17.2
 
 """
 
@@ -214,10 +215,13 @@ class RewardScheme:
                     print(shape_name)
                 for i in range(len(desired_shape)):
                     for j in range(len(desired_shape[i])):
-                        if desired_shape[i][j] == 0:
-                            print(" #", end="")
+                        if self.vf[i][j] > 0:
+                            if desired_shape[i][j] == 0:
+                                print(" #", end="")
+                            else:
+                                print("  ", end="")
                         else:
-                            print("  ", end="")
+                            print(" O", end="")
                     print()
             else:
                 print("Must provide a desired shape for 'shape' reward scheme")

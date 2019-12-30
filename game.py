@@ -9,6 +9,7 @@
 
  Python version 3.7.3
  Pytorch version 1.2.0
+ Numpy version 1.17.2
 
 """
 
@@ -102,7 +103,7 @@ class MainWindow(Frame):
         # Initialize and display generation count
         generation_label = Label(self.display_console, text="Generation #:",
                                  fg="white", bg="gray")
-        generation_label.grid(row=0, columnspan=2)
+        generation_label.grid(row=0, column=0, columnspan=2, sticky="e")
         self.generation_count = Label(self.display_console,
                                       text=str(self.generation),
                                       font=("Arial", 20), width=3,
@@ -118,7 +119,7 @@ class MainWindow(Frame):
         # Reward meter
         reward_label = Label(self.display_console, text="Reward:",
                              fg="white", bg="gray")
-        reward_label.grid(row=2, column=0, padx=4, pady=7, sticky="w")
+        reward_label.grid(row=2, column=0, padx=4, pady=7, sticky="e")
         self.reward_meter = Canvas(self.display_console, width=100, height=15)
         self.reward_meter.grid(row=2, column=1, columnspan=2)
         self.reward_meter_level = self.reward_meter.create_rectangle(
@@ -167,7 +168,7 @@ class MainWindow(Frame):
         self.message_frame = Frame(self.display_console)
         self.message_frame.grid(row=7, columnspan=3, pady=10)
         self.message_list = Listbox(self.message_frame,
-                                    width=28, height=16,
+                                    width=30, height=12,
                                     font=("Courier", 11))
         self.message_list.pack(side=LEFT, fill=BOTH, expand=1)
         self.message_scrollbar = Scrollbar(self.message_frame,
