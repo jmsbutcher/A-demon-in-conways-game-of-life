@@ -109,4 +109,7 @@ The gray cells represent the agent's **visual field**. The agent can "sense" whe
 
 The white square in the center of the visual field is the agent's **eye location**. This is the one and only square the agent uses to move around and interact with the environment. At any given time, the agent may "flip" a cell from black to white or vice versa at that location.
 
+<p align="center">
+  <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/DemonCloseUpLabelled.png">
+</p>
 
