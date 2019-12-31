@@ -57,7 +57,7 @@ also to run the above command.
 
 ### The GUI Interface
 Once you run the command `python game.py`, this GUI should pop up:
-<>
+<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Empty_GUI_Labelled2.png">
 
 
-### Original, Demon-Free Conway's Game of Life
+### Original Conway's Game of Life
