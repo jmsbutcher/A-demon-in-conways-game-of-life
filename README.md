@@ -75,4 +75,6 @@ The game starts with the demon disabled by default. This is a good opportunity t
 
 To begin, click the "Seed" button to generate some live cells in the middle of the environment grid.
 
-<img align="center" width="200" height="220" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Seed.png">
+<p align="center">
+  <img width="300" height="280" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Seed.png">
+</p>
