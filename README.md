@@ -120,9 +120,9 @@ The white square in the center of the visual field is the agent's **eye location
 Take manual control over the agent by cliking "Manual Mode" in the bottom left of the window or by pressing the M key.
 Now you can move the agent and flip cells wherever you want. This is useful for creating custom cell state arrangements.
 
-- Move Up, Down, Left, and Right: Arrow keys
-- Flip cell: C key
-- Advance game by 1 step: Spacebar (To run game continuously, you must click the "Start" button while in Manual Mode)
+- **Move Up, Down, Left, and Right --- Arrow keys**
+- **Flip cell --- C key**
+- **Advance game by 1 step --- Spacebar** (To run game continuously, you must click the "Start" button while in Manual Mode)
 
 <br>
 
