@@ -76,5 +76,7 @@ The game starts with the demon disabled by default. This is a good opportunity t
 To begin, click the "Seed" button to generate some live cells in the middle of the environment grid.
 
 <p align="center">
-  <img width="300" height="280" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Seed.png">
+  <img width="320" height="280" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Seed.png">
 </p>
+
+Then click the "Step" button to see the cells change based on the [rules of the game](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). This is the next "generation" of cells. Notice that the Generation # has increased by one --- located in the top right corner of the window.
