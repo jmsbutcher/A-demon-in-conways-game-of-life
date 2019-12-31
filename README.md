@@ -62,10 +62,10 @@ Once you run the command `python game.py`, this GUI should pop up:
 
 <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/Empty_GUI_Labelled2.png">
 
--The **Game Environment** is where the grid of cells live and die
--The **Agent view display** shows a close-up of the agent's field of view when enabled
--The **Reward meter** shows the amount of reward the agent receives on a given game step
--The **Reward scheme** shows the current reward mechanism for the agent
+- The **Game Environment** is where the grid of cells live and die
+- The **Agent view display** shows a close-up of the agent's field of view when enabled
+- The **Reward meter** shows the amount of reward the agent receives on a given game step
+- The **Reward scheme** shows the current reward mechanism for the agent
 
 <br>
 
