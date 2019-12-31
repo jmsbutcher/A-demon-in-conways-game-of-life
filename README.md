@@ -134,4 +134,4 @@ With the agent enabled and Manual Mode disabled, start the game and watch the ch
 
 The agent's actions are random until you choose a reward scheme. 
 
-By default, it takes up to 10 actions per game step. This can be changed in the Settings menu.
+By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu.
