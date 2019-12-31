@@ -80,3 +80,15 @@ To begin, click the "Seed" button to generate some live cells in the middle of t
 </p>
 
 Then click the "Step" button to see the cells change based on the [rules of the game](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). This is the next "generation" of cells. Notice that the Generation # has increased by one --- located in the top right corner of the window.
+
+To run the game continuously, click the "Start" button, or press the Spacebar. You can speed up the game by clicking the "Speed Up" button or pressing the P key, and slow it down by clicking the "Slow Down" button or pressing the O key. These commands with their associated keyboard shortcuts can also be accessed via the "Run" menu.
+
+<br>
+
+### Settings
+
+Access the Settings Menu by clicking "File" --> "Settings" or by pressing the S key.
+
+Here you can change the height and width of the environment grid, measured in number of cells.
+
+You can also change the "Scale" of each cell, making all of them bigger or smaller to better fit your screen.
