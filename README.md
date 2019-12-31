@@ -92,3 +92,21 @@ Access the Settings Menu by clicking "File" --> "Settings" or by pressing the S 
 Here you can change the height and width of the environment grid, measured in number of cells.
 
 You can also change the "Scale" of each cell, making all of them bigger or smaller to better fit your screen.
+
+<br>
+
+### Enabling the Demon
+
+To introduce the agent into the environment, click "Enable Demon" in the bottom left corner of the window or press the E key.
+
+The agent should appear in the center of the grid like so:
+
+<p align="center">
+  <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/DemonEnabled.png">
+</p>
+
+The gray cells represent the agent's **visual field**. The agent can "sense" whether each cell within the visual field is alive or dead. This information is fed into its "brain" and will be used later for decision making. A close-up of the agent's current view is displayed in the white square to the upper right.
+
+The white square in the center of the visual field is the agent's **eye location**. This is the one and only square the agent uses to move around and interact with the environment. At any given time, the agent may "flip" a cell from black to white or vice versa at that location.
+
+
