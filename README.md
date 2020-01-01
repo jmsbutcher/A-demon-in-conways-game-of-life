@@ -145,6 +145,7 @@ With the agent enabled and Manual Mode disabled, start the game and watch the ch
 - These actions are random until you choose a **Reward Scheme** (see below).
 
 - The **agent speed** is the maximum number of actions the agent takes per game step. If the agent selects the *Wait* action, the next generation proceeds immediately. For example, if the agent speed is 5, the actions may look like this:
+
 Generation | Actions
 ---------- | -------
 0 | Up Up Left Flip Right
