@@ -132,8 +132,18 @@ Now you can move the agent and flip cells wherever you want. This is useful for 
 
 Time to unleash the demon :smiling_imp: 
 
-With the agent enabled and Manual Mode disabled, start the game and watch the chaos begin.
+With the agent enabled and Manual Mode disabled, start the game and watch the chaos begin. The agent will begin moving around and flipping cells, disrupting the natural evolution of the game. The agent ensures the cells will never reach a steady state.
 
-The agent's actions are random until you choose a reward scheme. 
+- There are six possible agent actions:
+  - Move up
+  - Move down
 
-By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu.
+
+- These actions are random until you choose a **Reward Scheme** (see below).
+
+- The **agent speed** is the maximumnumber of actions the agent takes
+ - By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu. 
+
+ 
+
+
