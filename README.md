@@ -148,20 +148,13 @@ With the agent enabled and Manual Mode disabled, start the game and watch the ch
 
 Generation | Actions
 ---------- | -------
-0 | Up Up Left Flip Right
-1 | Flip Down Flip Left Wait
-2 | Right Wait
-3 | Wait
-4 | Down Right Up Up Flip
+0 | Up - Up - Left - Flip - Right
+1 | Flip - Down - Flip - Left - **Wait**
+2 | Right - **Wait**
+3 | **Wait**
+4 | Down - Right - Up - Up - Flip
 
-
-First Header | Second Header
------------- | -------------
-Content from cell 1 | Content from cell 2
-Content in the first column | Content in the second column
-
-
-- By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu. 
+- The agent speed is 10 by default, therefore it takes up to 10 actions per game step. This can be changed in the Settings menu. 
 
  
 
