@@ -156,6 +156,10 @@ Generation | Actions
 
 - The agent speed is 10 by default, therefore it takes up to 10 actions per game step. This can be changed in the Settings menu. 
 
+ <br>
  
+ ### Choosing a Reward Scheme
+ 
+ A *Reward Scheme* is a system for assigning rewards to the agent. 
 
 
