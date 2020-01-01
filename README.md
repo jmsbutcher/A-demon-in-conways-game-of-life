@@ -153,6 +153,13 @@ Generation | Actions
 3 | Wait
 4 | Down, Right, Up, Up, Flip
 
+
+First Header | Second Header
+------------ | -------------
+Content from cell 1 | Content from cell 2
+Content in the first column | Content in the second column
+
+
 - By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu. 
 
  
