@@ -137,12 +137,23 @@ With the agent enabled and Manual Mode disabled, start the game and watch the ch
 - There are six possible agent actions:
   - Move up
   - Move down
-
+  - Move left
+  - Move right
+  - Flip cell
+  - Wait until next game step
 
 - These actions are random until you choose a **Reward Scheme** (see below).
 
-- The **agent speed** is the maximumnumber of actions the agent takes
- - By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu. 
+- The **agent speed** is the maximum number of actions the agent takes per game step. If the agent selects the *Wait* action, the next generation proceeds immediately. For example, if the agent speed is 5, the actions may look like this:
+Generation | Actions
+-----------|--------
+0          |Up, Up, Left, Flip, Right
+1          |Flip, Down, Flip, Left, Wait
+2          |Right, Wait
+3          |Wait
+4          |Down, Right, Up, Up, Flip
+
+- By default, the agent takes up to 10 actions per game step. This can be changed in the Settings menu. 
 
  
 
