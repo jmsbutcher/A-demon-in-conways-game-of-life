@@ -83,6 +83,8 @@ Then click the "Step" button to see the cells change based on the [rules of the 
 
 To run the game continuously, click the "Start" button, or press the Spacebar. You can speed up the game by clicking the "Speed Up" button or pressing the P key, and slow it down by clicking the "Slow Down" button or pressing the O key. These commands with their associated keyboard shortcuts can also be accessed via the "Run" menu.
 
+You may notice that the cells reach a steady state fairly quickly. Left to itself, they will stay that way forever. That will change once we enable the agent.
+
 <br>
 
 ### Settings
