@@ -175,18 +175,23 @@ Generation | Actions
 
 <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/WithMaximizeReward_Labelled3.png">
 
-The **Make shape** Reward Scheme opens an editor window for creating a "reward shape." Click the squares to flip them and create the pattern you want. The agent will then receive a reward based on how close its view matches this pattern. The current brain model has a very hard time learning how to produce anything but the simplest shapes, but perhaps you can make it work with some experimentationa and some elbow grease!
+The **Make shape** Reward Scheme opens an editor window for creating a "reward shape." Click the squares to flip them and create the pattern you want. The agent will then receive a reward based on how close its view matches this pattern. You can save and load these Reward Shapes by clicking "File" then "Save Reward Shape".
+
+<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/RewardShapeDiagram1_Labelled.png">
 
 
+The current brain model has a very hard time learning how to produce anything but the simplest shapes, but perhaps you can make it work with some experimentation and some elbow grease!
 
 <br>
 
 ### Learning
 
-After choosing the "Maximize Life" Reward Scheme and letting the agent run for several hundred generations, you will notice that its behavior changes. It begins frantically creating life wherever it goes, and jumps on top of islands of activity whenever it senses some life at the edge of its vision.
+After choosing the "Maximize Life" Reward Scheme and letting the agent run for several thousand generations, you will notice that its behavior changes. It begins frantically creating life wherever it goes, and jumps on top of islands of activity whenever it senses some life at the edge of its vision.
 
 You can see the agent's learning progress by clicking the "Window" menu, then "Reward Plot." It will display a chart of the average running reward over time.
 
+<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/RewardPlot1.png">
 
+You can save the state of the agent's brain by clicking "File" then "Save Brain". This allows you to save and load a brain state after closing the program so you don't have to re-train the agent each time. Just make sure you note the reward scheme it trained with.
 
 
