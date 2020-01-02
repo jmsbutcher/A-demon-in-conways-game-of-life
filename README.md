@@ -169,10 +169,24 @@ Generation | Actions
 </p>
  
  There are currently 3 Reward Schemes types to choose from. They are all determined by the state of the cells within the agent's visual field:
- - Maximize Life - More live cells means higher reward
- - Minimize Life - More live cells means lower reward
- - Make shape - Exact match yields maximum reward. Partial match yields less reward.
+ - **Maximize Life** - More live cells means higher reward
+ - **Minimize Life** - More live cells means lower reward
+ - **Make shape** - Exact match yields maximum reward. Partial match yields less reward.
 
 <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/WithMaximizeReward_Labelled3.png">
+
+The **Make shape** Reward Scheme opens an editor window for creating a "reward shape." Click the squares to flip them and create the pattern you want. The agent will then receive a reward based on how close its view matches this pattern. The current brain model has a very hard time learning how to produce anything but the simplest shapes, but perhaps you can make it work with some experimentationa and some elbow grease!
+
+
+
+<br>
+
+### Learning
+
+After choosing the "Maximize Life" Reward Scheme and letting the agent run for several hundred generations, you will notice that its behavior changes. It begins frantically creating life wherever it goes, and jumps on top of islands of activity whenever it senses some life at the edge of its vision.
+
+You can see the agent's learning progress by clicking the "Window" menu, then "Reward Plot." It will display a chart of the average running reward over time.
+
+
 
 
