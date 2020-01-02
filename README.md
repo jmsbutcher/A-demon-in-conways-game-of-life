@@ -194,4 +194,14 @@ You can see the agent's learning progress by clicking the "Window" menu, then "R
 
 You can save the state of the agent's brain by clicking "File" then "Save Brain". This allows you to save and load a brain state after closing the program so you don't have to re-train the agent each time. Just make sure you note the reward scheme it trained with.
 
+<br>
 
+### Editing the Visual Field
+
+To change the shape of the visual field, click the "New" menu, then "Visual Field", or press the V key. This will open an editor window where you can create a custom shape for the visual field.
+
+You can save your custom visual field by clicking "File" then "Save Visual Field"
+
+**Note**: 
+- Changing the visual field will remove the current reward scheme and reset the agent's brain. Make sure you save them first if you want to keep them.
+- If you are loading a reward scheme shape, you must make sure the dimensions of the shape match the dimensions of the current visual field. For example, both must be a 7 x 7 grid, or a 5 x 10 grid, etc.
