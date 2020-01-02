@@ -81,7 +81,7 @@ To begin, click the "Seed" button to generate some live cells in the middle of t
 
 Then click the "Step" button to see the cells change based on the [rules of the game](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). This is the next "generation" of cells. Notice that the Generation # has increased by one --- located in the top right corner of the window.
 
-To run the game continuously, click the "Start" button, or press the [Spacebar]. You can speed up the game by clicking the "Speed Up" button or pressing the P key, and slow it down by clicking the "Slow Down" button or pressing the O key. These commands with their associated keyboard shortcuts can also be accessed via the "Run" menu.
+To run the game continuously, click the "Start" button, or press the [Spacebar]. You can speed up the game by clicking the "Speed Up" button or pressing the [p] key, and slow it down by clicking the "Slow Down" button or pressing the [o] key. These commands with their associated keyboard shortcuts can also be accessed via the "Run" menu.
 
 You may notice that the cells reach a steady state fairly quickly. Left to itself, they will stay that way forever. That will change once we enable the agent.
 
@@ -89,7 +89,7 @@ You may notice that the cells reach a steady state fairly quickly. Left to itsel
 
 ### Settings
 
-Access the Settings Menu by clicking "File" --> "Settings" or by pressing the S key.
+Access the Settings Menu by clicking "File" --> "Settings" or by pressing the [s] key.
 
 Here you can change the height and width of the environment grid, measured in number of cells.
 
@@ -99,7 +99,7 @@ You can also change the "Scale" of each cell, making all of them bigger or small
 
 ### Enabling the Demon
 
-To introduce the agent into the environment, click "Enable Demon" in the bottom left corner of the window or press the E key.
+To introduce the agent into the environment, click "Enable Demon" in the bottom left corner of the window or press the [e] key.
 
 The agent should appear in the center of the grid like so:
 
@@ -119,7 +119,7 @@ The white square in the center of the visual field is the agent's **eye location
 
 ### Manual Mode
 
-Take manual control over the agent by cliking "Manual Mode" in the bottom left of the window or by pressing the M key.
+Take manual control over the agent by cliking "Manual Mode" in the bottom left of the window or by pressing the [m] key.
 Now you can move the agent and flip cells wherever you want. This is useful for creating custom cell state arrangements.
 
 - **Move Up, Down, Left, and Right --- Arrow keys**
@@ -162,7 +162,7 @@ Generation | Actions
  
  A *Reward Scheme* is a system for assigning rewards to the agent. **Once you choose a Reward Scheme, the agent will begin learning**. It will no longer act randomly (although it may look like it at first.) It will try to maximize the reward by moving and flipping cells based on the output of the neural network. 
  
- To choose a new Reward Scheme, click the button in the display console, or open the "New" menu and select "Reward Scheme", or press the R key.
+ To choose a new Reward Scheme, click the button in the display console, or open the "New" menu and select "Reward Scheme", or press the [r] key.
  
 <p align="center">
   <img width="280" height="220" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/NewRewardSchemeMenu.png">
@@ -198,10 +198,10 @@ You can save the state of the agent's brain by clicking "File" then "Save Brain"
 
 ### Editing the Visual Field
 
-To change the shape of the visual field, click the "New" menu, then "Visual Field", or press the V key. This will open an editor window where you can create a custom shape for the visual field.
+To change the shape of the visual field, click the "New" menu, then "Visual Field", or press the [v] key. This will open an editor window where you can create a custom shape for the visual field.
 
 You can save your custom visual field by clicking "File" then "Save Visual Field"
 
 **Note**: 
 - Changing the visual field will remove the current reward scheme and reset the agent's brain. Make sure you save them first if you want to keep them.
-- If you are loading a reward scheme shape, you must make sure the dimensions of the shape match the dimensions of the current visual field. For example, both must be a 7 x 7 grid, or a 5 x 10 grid, etc.
+- If you are loading a reward scheme shape, you must make sure the dimensions of the shape match the dimensions of the current visual field. For example, both must be a 7 x 7 grid (the default), or a 5 x 10 grid, etc.
