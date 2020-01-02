@@ -165,13 +165,13 @@ Generation | Actions
  To choose a new Reward Scheme, click the button in the display console, or open the "New" menu and select "Reward Scheme", or press the R key.
  
 <p align="center">
-  <img width="400" height="280" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/NewRewardSchemeMenu.png">
+  <img width="300" height="220" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/NewRewardSchemeMenu.png">
 </p>
  
  There are currently 3 Reward Schemes types to choose from. They are all determined by the state of the cells within the agent's visual field:
  - Maximize Life - More live cells means higher reward
  - Minimize Life - More live cells means lower reward
- - Make shape - Exact match yields maximum reward. Partial match gives less reward.
+ - Make shape - Exact match yields maximum reward. Partial match yields less reward.
 
 <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/WithMaximizeReward_Labelled3.png">
 
