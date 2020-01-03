@@ -126,9 +126,9 @@ The white square in the center of the visual field is the agent's **eye location
 Take manual control over the agent by cliking "Manual Mode" in the bottom left of the window or by pressing the [m] key.
 Now you can move the agent and flip cells wherever you want. This is useful for creating custom cell state arrangements.
 
-- **Move Up, Down, Left, and Right --- Arrow keys**
-- **Flip cell --- C key**
-- **Advance game by 1 step --- Spacebar** (To run game continuously, you must click the "Start" button while in Manual Mode)
+- **Move Up, Down, Left, and Right --- [Arrow keys]**
+- **Flip cell --- [c] key**
+- **Advance game by 1 step --- [Spacebar]** (To run game continuously, you must click the "Start" button while in Manual Mode)
 
 <br>
 
@@ -172,7 +172,7 @@ Generation | Actions
   <img width="280" height="220" src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/NewRewardSchemeMenu.png">
 </p>
  
- There are currently 3 Reward Schemes types to choose from. They are all determined by the state of the cells within the agent's visual field:
+ There are currently 3 Reward Scheme types to choose from. They are all determined by the state of the cells within the agent's visual field:
  - **Maximize Life** - More live cells means higher reward
  - **Minimize Life** - More live cells means lower reward
  - **Make shape** - Exact match yields maximum reward. Partial match yields less reward.
