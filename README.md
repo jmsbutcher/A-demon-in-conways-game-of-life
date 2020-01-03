@@ -215,3 +215,4 @@ You can save your custom visual field by clicking "File" then "Save Visual Field
 
 (c) 2020, James Butcher  
 jmsbutcher1576@gmail.com
+©
