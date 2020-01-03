@@ -3,7 +3,7 @@
 ## Conway's Game of Life as GUI-based Environment for Artificial Intelligence
 
 <p align="center">
-  <img border=1 src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/small_agent_clip.gif">
+  <img border=3 src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/small_agent_clip.gif">
 </p>
 
 Life's evolution has run without interference... until now.
