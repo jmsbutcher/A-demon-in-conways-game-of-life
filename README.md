@@ -2,6 +2,8 @@
 
 ## Conway's Game of Life as GUI-based Environment for Artificial Intelligence
 
+<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/ezgif.com-crop.gif">
+
 Life's evolution has run without interference... until now.
 
 An intelligent agent lives within the game, moving around
