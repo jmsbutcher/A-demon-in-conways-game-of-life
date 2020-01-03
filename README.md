@@ -213,3 +213,5 @@ You can save your custom visual field by clicking "File" then "Save Visual Field
 - Loading a brain file into an agent with a different visual field from the one it learned with will make it not run correctly. Be sure to take note of the visual field associated with a brain file.
 - If you are loading a reward scheme shape, you must make sure the dimensions of the shape match the dimensions of the current visual field. For example, both must be a 7 x 7 grid (the default), or a 5 x 10 grid, etc.
 
+(c) James Butcher, 2020
+jmsbutcher1576@gmail.com
