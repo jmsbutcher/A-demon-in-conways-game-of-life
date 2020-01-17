@@ -37,7 +37,7 @@ and testing AI systems.
 
 <br>
 
-## Prerequisites:
+## Requirements:
 <ul>
   <li>Python 3.7</li>
   <li>Numpy 1.17</li>
