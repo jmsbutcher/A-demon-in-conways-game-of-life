@@ -77,6 +77,7 @@ class MainWindow(Frame):
         self.running = False    # game is paused until start_game() is called
         self.interval = 0.5     # time between steps; how fast the game runs
         self.generation = 0     # how many steps (generations) has passed
+        self.reward_window_avg_length = 10000  # for smoothing reward plot
         self.vis_field = large_vf  # Default shape of the agent's visual field
         # Initialize agent eye location coordinates to the center of the grid
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
@@ -552,8 +553,24 @@ class MainWindow(Frame):
             self.reward_shape_view.grid_remove()
 
     def display_reward_plot(self):
-        # Show a matplotlib plot of the average running reward over time
-        plt.plot(self.avg_running_reward)
+        # Show a matplotlib plot of the absolute and
+        #   average running reward over time
+        plt.subplot(211)
+        plt.plot(self.reward_window, 'g.')
+        plt.title("Absolute Reward Over Last {} Actions".format(
+                  self.reward_window_avg_length))
+        plt.xlabel("Agent actions")
+        plt.ylabel("Reward")
+        
+        plt.subplot(212)
+        plt.plot(self.avg_running_reward, 'b--')
+        plt.title("Average Running Reward Over {} Actions".format(
+                  self.reward_window_avg_length))
+        plt.xlabel("Agent actions")
+        plt.ylabel("Reward")
+        
+        plt.subplots_adjust(hspace=0.5)
+
         plt.show()
 
     def flip_cell(self, chance=1):
@@ -1081,7 +1098,7 @@ class MainWindow(Frame):
         # Update reward information
         reward = self.reward_scheme.get_reward()
         self.reward_window.append(reward)
-        if len(self.reward_window) > 1000:
+        if len(self.reward_window) > self.reward_window_avg_length:
             del self.reward_window[0]
         self.avg_running_reward.append(
             sum(self.reward_window) / (len(self.reward_window) + 1.0))
