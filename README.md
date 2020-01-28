@@ -57,6 +57,7 @@ or ```python3 game.py``` if python 3 is not your default version.
 - If you are using Windows 10, you may need to download Anaconda and use
 **Anaconda Prompt** instead of **Command Prompt** to install Pytorch and
 also to run the above command.
+- I have had trouble downloading Pytorch on both Windows and Mac. Downloading Anaconda seems to have fixed it and allowed me to install Pytorch without errors.
 
 <br>
 
