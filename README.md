@@ -52,6 +52,7 @@ and testing AI systems.
 ```
 python game.py
 ```
+or ```python3 game.py``` if python 3 is not your default version.
 
 - If you are using Windows 10, you may need to download Anaconda and use
 **Anaconda Prompt** instead of **Command Prompt** to install Pytorch and
