@@ -194,7 +194,7 @@ The current brain model has a very hard time learning how to produce anything bu
 
 After choosing the "Maximize Life" Reward Scheme and letting the agent run for several thousand generations, you will notice that its behavior changes. It begins frantically creating life wherever it goes, and jumps on top of islands of activity whenever it senses some life at the edge of its vision.
 
-You can see the agent's learning progress by clicking the "Window" menu, then "Reward Plot." It will display a chart of the average running reward over time.
+You can see the agent's learning progress by clicking the "Window" menu, then "Reward Plot." It will display a chart of the absolute and average running reward over time.
 
 <img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/RewardPlot2.png">
 
