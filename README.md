@@ -196,7 +196,7 @@ After choosing the "Maximize Life" Reward Scheme and letting the agent run for s
 
 You can see the agent's learning progress by clicking the "Window" menu, then "Reward Plot." It will display a chart of the average running reward over time.
 
-<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/RewardPlot1.png">
+<img src="https://github.com/jmsbutcher/A-demon-in-conways-game-of-life/blob/master/Usage_images/RewardPlot2.png">
 
 You can save the state of the agent's brain by clicking "File" then "Save Brain". This allows you to save and load a brain state after closing the program so you don't have to re-train the agent each time. Just make sure you note the reward scheme it trained with.
 
