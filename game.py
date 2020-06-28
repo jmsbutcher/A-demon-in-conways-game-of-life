@@ -14,7 +14,8 @@
 """
 
 # Import the "demon" (the intelligent agent) from demon.py
-from demon import Agent, RewardScheme
+from demon import Agent
+from rewardscheme import RewardScheme
 
 import matplotlib.pyplot as plt
 import numpy as np
