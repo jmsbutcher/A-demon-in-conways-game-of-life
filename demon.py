@@ -53,7 +53,7 @@ class Agent():
 
         self.last_state = torch.Tensor(vision_size).unsqueeze(0)
         self.last_action = 0
-        self.last_reward = 0
+#        self.last_reward = 0
 
     def learn(self, batch_state, batch_next_state, batch_action, batch_reward):
         # TD learning procedure, using batches of 100
@@ -118,7 +118,8 @@ class Agent():
         self.memory.push((self.last_state,
                           new_state,
                           torch.LongTensor([int(self.last_action)]),
-                          torch.Tensor([self.last_reward])))
+                          torch.Tensor([reward])))
+#                          torch.Tensor([self.last_reward])))
 
         # Select action
         action = self.select_action(new_state)
@@ -133,7 +134,7 @@ class Agent():
 
         self.last_action = action
         self.last_state = new_state
-        self.last_reward = reward
+#        self.last_reward = reward
 
         return action
 

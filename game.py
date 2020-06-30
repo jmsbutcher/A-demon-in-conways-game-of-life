@@ -26,8 +26,8 @@ from PIL import Image, ImageTk
 from random import randint
 from tkinter import BOTH, BOTTOM, END, LEFT, RIGHT, Y, \
                     Button, Canvas, Checkbutton, Entry, \
-                    filedialog, Frame, Label, Listbox, Menu, \
-                    OptionMenu, Scrollbar, StringVar, Tk, Toplevel
+                    filedialog, Frame, IntVar, Label, Listbox, Menu, \
+                    OptionMenu, Radiobutton, Scrollbar, StringVar, Tk, Toplevel
 
 # Default visual field shapes --- used in GridEditorWindow
 #   0 - Not part of the visual field
@@ -82,6 +82,12 @@ class MainWindow(Frame):
         self.vis_field = large_vf  # Default shape of the agent's visual field
         # Initialize agent eye location coordinates to the center of the grid
         self.eye_location = np.array((self.size[0]//2, self.size[1]//2))
+
+        # Choose what type of intelligent agent will be used ("Demon", "Scamp")
+        self.agent_type = ""
+        agent_selection_popup = AgentSelectionWindow(self.master, self)
+        self.master.wait_window(agent_selection_popup.top)
+        print(self.agent_type)
 
         # Create and initialize the agent object (the demon)
         #   The method below initializes the following:
@@ -612,6 +618,19 @@ class MainWindow(Frame):
         self.data = gun_data
         self.refresh_data_view()
 
+
+    
+#    def initialize_agent(self):
+#        # Create new agent object
+#        data = self.data
+#        vf = self.vis_field
+#        eye_loc = self.eye_location
+#        if agent_type == "Demon":
+#            gamma = 0.9  # Future discount factor for reinforcement learning
+#            self.agent = Agent(data, vf, eye_loc, gamma)
+#            self.agent.vision.update(data)
+        
+        
     def initialize_agent(self):
         # Create new agent object
         data = self.data
@@ -1137,6 +1156,58 @@ class MainWindow(Frame):
         else:
             color = "black"
         self.reward_meter.itemconfig(self.reward_meter_level, fill=color)
+
+
+class AgentSelectionWindow(Frame):
+    # Popup at startup to select type of agent
+    def __init__(self, master, main_window):
+        self.main_window = main_window
+        top = self.top = Toplevel(master)
+        top.focus_force()
+        self.top.title("Select Intelligent Agent")
+        self.selection = StringVar()
+        
+        self.demon_selection = Radiobutton(top, text="Demon", 
+                                           font=("Arial", 16),
+                                           command=self.update_description,
+                                           variable=self.selection,
+                                           value="Demon")
+        self.demon_selection.grid(row=0, column=0, padx=10, pady=10)
+        
+        self.scamp_selection = Radiobutton(top, text="Scamp", 
+                                           font=("Arial", 16),
+                                           command=self.update_description,
+                                           variable=self.selection, 
+                                           value="Scamp")
+        self.scamp_selection.grid(row=1, column=0, padx=10, pady=10)
+        
+        self.agent_descriptions = {"Demon": "A narrow-AI agent using a deep\n"
+                                       "reinforcement learning algorithm.\n"
+                                       "Works well with the 'Maximize'\n"
+                                       "reward scheme.",
+                              
+                              "Scamp": "A prototype agent using an\n"
+                                       "experimental new algorithm based on\n"
+                                       "Popperian epistemology and other\n"
+                                       "ideas. [Under Development]." }
+        
+        self.description = Label(top, text=self.agent_descriptions["Demon"])
+        self.description.grid(row=0, rowspan=2, column=1, padx=10, pady=10)
+        
+        ok_button = Button(top, text="OK", command=self.execute)
+        ok_button.bind("<Return>", self.execute)
+        ok_button.grid(row=2, column=0, padx=10, pady=10)
+        
+        self.demon_selection.select()
+        
+    def execute(self, *args):
+        selection = self.selection.get()
+        self.main_window.agent_type = selection
+        self.top.destroy()
+        
+    def update_description(self):
+        selection = self.selection.get()
+        self.description.configure(text=self.agent_descriptions[selection])
 
 
 class SettingsWindow(Frame):
