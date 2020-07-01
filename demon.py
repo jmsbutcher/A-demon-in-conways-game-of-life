@@ -25,7 +25,7 @@
 
 """
 
-import numpy as np
+#import numpy as np
 import random
 import torch
 import torch.nn as nn
@@ -34,7 +34,7 @@ import torch.optim as optim
 from vision import Vision
 
 
-class Agent():
+class DemonAgent():
     def __init__(self, env_data, vf, abs_eye_loc, gamma):
         # Agent's vision -- for retrieving visual information from the
         #   environment and controlling movement around the environment

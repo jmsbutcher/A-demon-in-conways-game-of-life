@@ -14,7 +14,8 @@
 """
 
 # Import the "demon" (the intelligent agent) from demon.py
-from demon import Agent
+from demon import DemonAgent
+from scamp import ScampAgent
 from rewardscheme import RewardScheme
 
 import matplotlib.pyplot as plt
@@ -26,8 +27,10 @@ from PIL import Image, ImageTk
 from random import randint
 from tkinter import BOTH, BOTTOM, END, LEFT, RIGHT, Y, \
                     Button, Canvas, Checkbutton, Entry, \
-                    filedialog, Frame, IntVar, Label, Listbox, Menu, \
-                    OptionMenu, Radiobutton, Scrollbar, StringVar, Tk, Toplevel
+                    filedialog, Frame, Label, Listbox, Menu, \
+                    OptionMenu, Radiobutton, Scrollbar, StringVar, Tk, \
+                    Toplevel, VERTICAL
+from tkinter.ttk import Separator
 
 # Default visual field shapes --- used in GridEditorWindow
 #   0 - Not part of the visual field
@@ -87,22 +90,26 @@ class MainWindow(Frame):
         self.agent_type = ""
         agent_selection_popup = AgentSelectionWindow(self.master, self)
         self.master.wait_window(agent_selection_popup.top)
-        print(self.agent_type)
+        print("\nIntelligent Agent Type: {}\n".format(self.agent_type))
 
-        # Create and initialize the agent object (the demon)
+        
+        # Create and initialize the agent object 
         #   The method below initializes the following:
-        #     - self.agent = Agent(...)
-        #     - self.agent.vision.update(data)
-        #     - gamma = 0.9 by default
+        #     - self.agent = [Agent type](...)  
         self.initialize_agent()
         self.agent_enabled = False  # Start game with agent disabled
         self.manual_mode = False    # Start game with manual mode off
-        self.agent_speed = 10       # Maximum agent actions per game step
+#        self.agent_speed = 1       # Maximum agent actions per game step
         self.wait = False           # For handling wait actions during game
 
         #---------------------------------------------------------------------
         # Frames and Widgets
         #---------------------------------------------------------------------
+        if self.agent_type == "Scamp":
+            self.scamp_frame = Frame(self.master, borderwidth=5,
+                                     relief="ridge", width=400, bg="gray")
+            self.scamp_frame.pack(fill=BOTH, side=RIGHT, expand=1)
+        
         # Right Frame - Display Console: for displaying demon's readouts
         self.display_console = Frame(self.master, borderwidth=5,
                                      relief="ridge", width=400, bg="gray")
@@ -206,21 +213,30 @@ class MainWindow(Frame):
         #---------------------------------------------------------------------
         # Buttons
         #---------------------------------------------------------------------
-        quit_button = Button(button_menu, text="Quit", command=self.quit_game)
-        seed_button = Button(button_menu, text="Seed", command=self.seed)
+        quit_button = Button(button_menu, text="Quit", command=self.quit_game,
+                             highlightbackground="#DDDDDD")
+        seed_button = Button(button_menu, text="Seed", command=self.seed,
+                             highlightbackground="#DDDDDD")
         random_button = Button(button_menu, text="Random",
-                               command=self.randomize)
-        clear_button = Button(button_menu, text="Clear", command=self.clear)
+                               command=self.randomize,
+                               highlightbackground="#DDDDDD")
+        clear_button = Button(button_menu, text="Clear", command=self.clear,
+                              highlightbackground="#DDDDDD")
         start_button = Button(button_menu, text="Start",
-                              command=self.start_game)
-        step_button = Button(button_menu, text="Step", command=self.step)
-        stop_button = Button(button_menu, text="Stop", command=self.stop_game)
+                              command=self.start_game,
+                              highlightbackground="#DDDDDD")
+        step_button = Button(button_menu, text="Step", command=self.step,
+                             highlightbackground="#DDDDDD")
+        stop_button = Button(button_menu, text="Stop", command=self.stop_game,
+                             highlightbackground="#DDDDDD")
         speed_up_button = Button(button_menu, text="Speed Up",
-                                 command=self.speed_up)
+                                 command=self.speed_up,
+                                 highlightbackground="#DDDDDD")
         slow_down_button = Button(button_menu, text="Slow Down",
-                                  command=self.slow_down)
+                                  command=self.slow_down,
+                                  highlightbackground="#DDDDDD")
         self.toggle_agent_button = Checkbutton(button_menu,
-                                               text="Enable Demon",
+                                     text="Enable {}".format(self.agent_type),
                                                bg="#DDDDDD",
                                                command=self.toggle_agent)
         self.manual_mode_button = Checkbutton(button_menu, text="Manual Mode",
@@ -232,20 +248,23 @@ class MainWindow(Frame):
                                     bg="#DDDDDD", fg="red",
                                     font=("Arial Black", 25))
 
-        quit_button.grid(row=0, column=1, padx=10, pady=2)
-        seed_button.grid(row=0, column=2, padx=1)
-        random_button.grid(row=0, column=3, padx=1)
-        clear_button.grid(row=0, column=4, padx=1)
-        start_button.grid(row=0, column=5, padx=1)
-        step_button.grid(row=0, column=6, padx=1)
-        stop_button.grid(row=0, column=7, padx=1)
-        speed_up_button.grid(row=0, column=8, padx=1)
-        slow_down_button.grid(row=0, column=9, padx=1)
-        self.toggle_agent_button.grid(row=1, column=0, columnspan=4,
+        quit_button.grid(row=0, column=1, padx=4, pady=4)
+        Separator(button_menu).grid(row=0, column=2, padx=5, sticky="NS")
+        seed_button.grid(row=0, column=3, padx=1)
+        random_button.grid(row=0, column=4, padx=1)
+        clear_button.grid(row=0, column=5, padx=1)
+        Separator(button_menu).grid(row=0, column=6, padx=5, sticky="NS")
+        start_button.grid(row=0, column=7, padx=1)
+        step_button.grid(row=0, column=8, padx=1)
+        stop_button.grid(row=0, column=9, padx=1)
+        Separator(button_menu).grid(row=0, column=10, padx=5, sticky="NS")
+        speed_up_button.grid(row=0, column=11, padx=1)
+        slow_down_button.grid(row=0, column=12, padx=1)
+        self.toggle_agent_button.grid(row=1, column=0, columnspan=5,
                                       sticky="w", padx=3, pady=3)
-        self.manual_mode_button.grid(row=2, column=0, columnspan=4,
+        self.manual_mode_button.grid(row=2, column=0, columnspan=5,
                                      sticky="w", padx=3, pady=3)
-        self.paused_message.grid(row=1, column=1, rowspan=2, columnspan=8)
+        self.paused_message.grid(row=1, column=4, rowspan=2, columnspan=8)
 
         #---------------------------------------------------------------------
         # Menus
@@ -617,28 +636,32 @@ class MainWindow(Frame):
         gun_data[x+8][y+13:y+15] = [0, 0]
         self.data = gun_data
         self.refresh_data_view()
-
-
-    
-#    def initialize_agent(self):
-#        # Create new agent object
-#        data = self.data
-#        vf = self.vis_field
-#        eye_loc = self.eye_location
-#        if agent_type == "Demon":
-#            gamma = 0.9  # Future discount factor for reinforcement learning
-#            self.agent = Agent(data, vf, eye_loc, gamma)
-#            self.agent.vision.update(data)
-        
-        
+ 
     def initialize_agent(self):
         # Create new agent object
         data = self.data
         vf = self.vis_field
         eye_loc = self.eye_location
-        gamma = 0.9  # Future discount factor for reinforcement learning
-        self.agent = Agent(data, vf, eye_loc, gamma)
-        self.agent.vision.update(data)
+        
+        if self.agent_type == "Demon":
+            gamma = 0.9  # Future discount factor for reinforcement learning
+            self.agent_speed = 10
+            self.agent = DemonAgent(data, vf, eye_loc, gamma)
+            self.agent.vision.update(data)
+            
+        elif self.agent_type == "Scamp":
+            self.agent_speed = 100
+            self.agent = ScampAgent(data, vf, eye_loc)
+            self.agent.vision.update(data)
+             
+#    def initialize_agent(self):
+#        # Create new agent object
+#        data = self.data
+#        vf = self.vis_field
+#        eye_loc = self.eye_location
+#        gamma = 0.9  # Future discount factor for reinforcement learning
+#        self.agent = Agent(data, vf, eye_loc, gamma)
+#        self.agent.vision.update(data)
 
     def initialize_reward_scheme(self, schemetype=None, name=None, shape=None):
         # Create new reward scheme object
@@ -652,29 +675,33 @@ class MainWindow(Frame):
         self.reset_reward_window()
 
     def load(self):
+        if self.agent_type == "Demon":
         # Load a brain model previously saved as a Pytorch .pth file
-        print("Loading brain...")
-
-        folder = Path.cwd() / "Saved_brains"
-
-        filename = filedialog.askopenfilename(
-            title="Load brain file",
-            filetypes=[("Path file", "*.pth")],
-            initialdir=folder)
-
-        # Cancel load if the user cancels out of the file dialog
-        if filename == "":
-            return
-
-        file = folder / filename
-
-        self.agent.load(file)
-
-        print("Brain loaded: ", file)
-        self.message_list.insert(END, "Brain loaded at gen {}".format(
-                                 self.generation))
-        self.message_list.insert(END, " \"{}\"".format(file.stem))
-        self.message_list.yview(END)
+            print("Loading brain...")
+    
+            folder = Path.cwd() / "Saved_brains"
+    
+            filename = filedialog.askopenfilename(
+                title="Load brain file",
+                filetypes=[("Path file", "*.pth")],
+                initialdir=folder)
+    
+            # Cancel load if the user cancels out of the file dialog
+            if filename == "":
+                return
+    
+            file = folder / filename
+    
+            self.agent.load(file)
+    
+            print("Brain loaded: ", file)
+            self.message_list.insert(END, "Brain loaded at gen {}".format(
+                                     self.generation))
+            self.message_list.insert(END, " \"{}\"".format(file.stem))
+            self.message_list.yview(END)
+        
+        else:
+            print("Cannot load brain for {} agent type.".format(self.agent_type))
 
     def load_reward_scheme_shape(self):
         # Load a reward scheme shape previously saved or
@@ -898,29 +925,33 @@ class MainWindow(Frame):
         self.avg_running_reward = []
 
     def save(self):
-        # Save the brain model (state and optimizer) as a Pytorch .pth file
-        print("Saving brain...")
-
-        folder = Path.cwd() / "Saved_brains"
-
-        filename = filedialog.asksaveasfilename(
-            title="Save brain file",
-            filetypes=[("Path file", "*.pth")],
-            initialdir=folder)
-
-        # Cancel save if the user cancels out of the file dialog
-        if filename == "":
-            return
-
-        file = folder / filename
-
-        self.agent.save(file)
-
-        print("Brain saved as {}".format(file))
-        self.message_list.insert(END, "Brain saved at gen {}".format(
-                                 self.generation))
-        self.message_list.insert(END, " as \"{}\"".format(file.stem))
-        self.message_list.yview(END)
+        if self.agent_type == "Demon":
+            # Save the brain model (state and optimizer) as a Pytorch .pth file
+            print("Saving brain...")
+    
+            folder = Path.cwd() / "Saved_brains"
+    
+            filename = filedialog.asksaveasfilename(
+                title="Save brain file",
+                filetypes=[("Path file", "*.pth")],
+                initialdir=folder)
+    
+            # Cancel save if the user cancels out of the file dialog
+            if filename == "":
+                return
+    
+            file = folder / filename
+    
+            self.agent.save(file)
+    
+            print("Brain saved as {}".format(file))
+            self.message_list.insert(END, "Brain saved at gen {}".format(
+                                     self.generation))
+            self.message_list.insert(END, " as \"{}\"".format(file.stem))
+            self.message_list.yview(END)
+        
+        else:
+            print("Cannot save brain for {} agent type.".format(self.agent_type))
 
     def save_visual_field(self):
         # Save the visual field as a text file
@@ -1055,16 +1086,28 @@ class MainWindow(Frame):
         self.agent.vision.update(newdata)
         self.display_agent_view()
 
-        # Update the agent <self.agent_speed> number of times
         if self.agent_enabled and not self.manual_mode:
-            for i in range(self.agent_speed):
-                self.update_agent()
-                self.display_exact_match()
-                time.sleep(self.interval / self.agent_speed)
-                # If the agent selects the "wait" action, stop early
-                if self.wait:
-                    break
-            self.wait = False
+            
+            if self.agent_type == "Demon":
+                # Update the agent <self.agent_speed> number of times
+                for i in range(self.agent_speed):
+                    self.update_agent()
+                    self.display_exact_match()
+                    time.sleep(self.interval / self.agent_speed)
+                    # If the agent selects the "wait" action, stop early
+                    if self.wait:
+                        break
+                self.wait = False
+                    
+            elif self.agent_type == "Scamp":
+                
+                while not self.wait:
+                    self.update_agent()
+                    time.sleep(self.interval / self.agent_speed)
+                    
+                self.wait = False
+                    
+                
 
         self.update()
         self.generation += 1
@@ -1079,7 +1122,7 @@ class MainWindow(Frame):
 
     def stop_game(self):
         self.running = False
-        self.paused_message.grid(row=1, column=1, rowspan=2, columnspan=8)
+        self.paused_message.grid(row=1, column=4, rowspan=2, columnspan=8)
 
     def toggle_agent(self, *args):
         # Turn the agent on or off so you can see how the game evolves
@@ -1128,6 +1171,7 @@ class MainWindow(Frame):
         action = self.agent.update(reward, viewdata)
         if not self.manual_mode:
             self.act(action)
+#        self.act(action)
 
         # Update displays
         self.update()
